@@ -1,0 +1,22 @@
+{
+  "name": "asura-md",
+  "version": "1.2.0",
+  "description": "A Simple Whatsapp Bot by Arun Cumar",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "@adiwajshing/keyed-db": "^0.2.4",
+    "pino": "^8.19.0",
+    "yt-search": "^2.10.4",
+    "axios": "^1.6.7",
+    "fs-extra": "^11.2.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "jimp": "^0.22.10",
+    "node-fetch": "^3.3.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

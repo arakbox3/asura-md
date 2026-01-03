@@ -1,19 +1,21 @@
 import yts from "yt-search";
 import { exec } from "child_process";
 import fs from "fs";
-import path from "path";
+import { promisify } from "util";
 
-export default async (sock, msg, query) => {
+const execPromise = promisify(exec);
+
+export default async (sock, msg, args) => {
   const chat = msg.key.remoteJid;
+  const searchQuery = args.join(" "); 
   
-  // 1. ക്വറി ഉണ്ടോ എന്ന് പരിശോധിക്കുന്നു
-  if (!query || query.length === 0) {
+  if (!searchQuery) {
     return sock.sendMessage(chat, { text: "❌ Usage: *.song* [song name/link]" });
   }
 
   try {
-    // 2. യൂട്യൂബിൽ തിരയുന്നു
-    const search = await yts(query);
+    // 1. യൂട്യൂബിൽ തിരയുന്നു (searchQuery തന്നെ ഇവിടെ നൽകണം)
+    const search = await yts(searchQuery);
     const video = search.videos[0];
     if (!video) return sock.sendMessage(chat, { text: "❌ Song Not Found!" });
 
@@ -29,49 +31,55 @@ export default async (sock, msg, query) => {
  ⊙📺 *CHANNEL:* ${video.author.name}
  ⊙👀 *VIEWS:* ${video.views}
  ⊙⏳ *DURATION:* ${video.timestamp}
-*◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
+*◀︎ •၊၊||၊||||။‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // 3. തംബ്‌നെയിൽ മെസ്സേജ് അയക്കുന്നു
+    // 2. തംബ്‌നെയിൽ മെസ്സേജ് അയക്കുന്നു
     await sock.sendMessage(chat, { 
       image: { url: video.thumbnail }, 
       caption: infoText 
     });
 
-    // 4. ഡൗൺലോഡ് പ്രോസസ്സ്
     const fileName = `./media/audio_${Date.now()}.mp3`;
-    
-    // yt-dlp ഉപയോഗിച്ച് ഓഡിയോ മാത്രം ഡൗൺലോഡ് ചെയ്യുന്നു
-    exec(`yt-dlp -x --audio-format mp3 --audio-quality 0 "${video.url}" -o "${fileName}"`, async (error) => {
-      if (error) {
-        console.error(error);
-        return sock.sendMessage(chat, { text: "❌ Error: Make sure *yt-dlp* and *ffmpeg* are installed!" });
-      }
 
-      // 5. ഓഡിയോ ഫയൽ അയക്കുന്നു
+    // 3. ഡൗൺലോഡ് പ്രോസസ്സ് (Promisified exec ഉപയോഗിക്കുന്നു)
+    try {
+      await execPromise(`yt-dlp -x --audio-format mp3 --audio-quality 0 "${video.url}" -o "${fileName}"`);
+      
       if (fs.existsSync(fileName)) {
         const stats = fs.statSync(fileName);
-        const fileSizeInBytes = stats.size;
-        const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+        const fileSizeMB = stats.size / (1024 * 1024);
 
-        // 100MB-ൽ കൂടുതൽ ഉള്ള ഫയലുകൾ അയക്കാൻ വാട്സാപ്പിൽ പ്രയാസമാണ്
-        if (fileSizeInMegabytes > 100) {
-            fs.unlinkSync(fileName);
-            return sock.sendMessage(chat, { text: "❌ File is too large to send!" });
+        if (fileSizeMB > 100) {
+          fs.unlinkSync(fileName);
+          return sock.sendMessage(chat, { text: "❌ File is too large (Over 100MB)!" });
         }
 
+        const audioBuffer = fs.readFileSync(fileName);
+
+        // ✅ ഓഡിയോ ഫയൽ അയക്കുന്നു
         await sock.sendMessage(chat, { 
-          audio: fs.readFileSync(fileName), 
+          audio: audioBuffer, 
           mimetype: "audio/mpeg",
           fileName: `${video.title}.mp3`
         }, { quoted: msg });
 
-        // 6. ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
+        // ✅ വോയിസ് നോട്ട് അയക്കുന്നു
+        await sock.sendMessage(chat, { 
+          audio: audioBuffer, 
+          mimetype: "audio/mp4", 
+          ptt: true 
+        }, { quoted: msg });
+
+        // ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
         fs.unlinkSync(fileName);
       }
-    });
+    } catch (execError) {
+      console.error(execError);
+      return sock.sendMessage(chat, { text: "❌ Error during downloading. Check yt-dlp/ffmpeg!" });
+    }
 
   } catch (e) {
     console.error(e);

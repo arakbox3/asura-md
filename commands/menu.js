@@ -52,4 +52,4 @@ export default async (sock, msg, query) => {
             console.error("Error in menu command:", error);
             await sock.sendMessage(from, { text: "Error sending menu!" });
         }
-    
+};

@@ -25,14 +25,15 @@ export default async (sock, msg, args) => {
 
     try {
         if (fs.existsSync(imagePath)) {
-            await sock.sendMessage(from, { 
+            await sock.sendMessage(chat, { 
                 image: fs.readFileSync(imagePath), 
                 caption: aliveMsg 
             }, { quoted: msg });
         } else {
-            await sock.sendMessage(from, { text: aliveMsg }, { quoted: msg });
+            await sock.sendMessage(chat, { text: aliveMsg }, { quoted: msg });
         }
     } catch (e) {
         console.error("Alive Error:", e);
     }
 }; 
+

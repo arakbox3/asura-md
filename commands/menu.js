@@ -43,8 +43,8 @@ const songPath = './media/song.ogg';
         if (fs.existsSync(songPath)) {
             await sock.sendMessage(chat, { 
                 audio: fs.readFileSync(songPath), 
-                mimetype: 'codecs=opus',
-                ptt: true 
+                mimetype: 'audio/mpeg',
+                ptt: false 
             }, { quoted: msg });
         }
 

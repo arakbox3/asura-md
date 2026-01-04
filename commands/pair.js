@@ -28,7 +28,7 @@ export default async (sock, msg, args) => {
 
 ╭╌❲ *ᴄᴏᴘʏ ᴄᴏᴅᴇ* ❳
 ╎ ⊙ 𝙱𝚘𝚝 𝚗𝚊𝚖𝚎 :- Asura MD
-╎ ⊙ 𝙿𝚊𝚒𝚛 𝚌𝚘𝚍𝚎 :- *${code}*
+╎ ⊙ 𝙿𝚊𝚒𝚛 𝚌𝚘𝚍𝚎 :- *\${code}*
 ╰╌╌╌╌╌╌╌╌╌࿐
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
 

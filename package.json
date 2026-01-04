@@ -21,7 +21,7 @@
     "ffmpeg-static": "latest", 
     "jimp": "latest",
     "node-fetch": "latest",
-    "g-i-s fs" "latest",
+    "g-i-s" "latest",
     "qrcode-terminal": "latest"
   }
 }

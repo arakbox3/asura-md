@@ -14,10 +14,11 @@
     "yt-search": "latest",
     "axios": "^1.6.7",
     "fs-extra": "^11.2.0",
-      "express": "latest",
+    "express": "latest",
     "readline": "latest",
     "link-preview-js": "latest",
     "fluent-ffmpeg": "^2.1.2",
+    "ffmpeg-static": "latest", 
     "jimp": "latest",
     "node-fetch": "latest",
     "qrcode-terminal": "latest"

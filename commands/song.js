@@ -1,4 +1,4 @@
-import yts from "yt-search";
+Import yts from "yt-search";
 import { exec } from "child_process";
 import fs from "fs";
 import { promisify } from "util";
@@ -63,19 +63,43 @@ export default async (sock, msg, args) => {
         }
 
         const audioBuffer = fs.readFileSync(fileName);
+        const thumbRes = await axios.get(video.thumbnail,        { responseType: 'arraybuffer' });
+const thumbBuffer = Buffer.from(thumbRes.data); // 'utf-8'
 
         // ✅ ഓഡിയോ ഫയൽ അയക്കുന്നു
         await sock.sendMessage(chat, { 
-          audio: audioBuffer, 
+          audio: audioBuffer,  
           mimetype: "audio/mpeg",
-          fileName: `${video.title}.mp3`
+          fileName: `${video.title}.mp3`,
+           contextInfo: {
+            externalAdReply: {
+              title: video.title,
+              body: 'Asura MD 👺',
+              thumbnail: thumbBuffer,
+              thumbnailUrl: video.thumbnail,
+              mediaType: 1,
+              sourceUrl: video.url,
+              renderLargerThumbnail: true,
+             }
+          }
         }, { quoted: msg });
 
         // ✅ വോയിസ് നോട്ട് അയക്കുന്നു
         await sock.sendMessage(chat, { 
           audio: audioBuffer, 
-          mimetype: "audio/ogg; condecs=opus",
-          ptt: true 
+          mimetype: "audio/ogg; codecs=opus",
+          ptt: true ,
+           contextInfo: {
+            externalAdReply: {
+              title: video.title,
+              body: 'Asura MD 👺',
+              thumbnail: thumbBuffer,
+              thumbnailUrl: video.thumbnail,
+              mediaType: 1,
+              sourceUrl: video.url,
+              renderLargerThumbnail: true,
+            }
+          }
         }, { quoted: msg });
 
         // ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
@@ -92,3 +116,4 @@ export default async (sock, msg, args) => {
   }
 };
 
+ഇപ്പോൾ buffer ആക്കി thumb

@@ -104,22 +104,21 @@ export default async (sock, msg, args) => {
               mediaType: 1,
               sourceUrl: video.url,
               renderLargerThumbnail: true,
+              }
             }
-          }
-        }, { quoted: msg });
+          }, { quoted: msg });
 
-        // ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
-        fs.unlinkSync(fileName);
-        fs.unlinkSync(voiceFileName); 
+          fs.unlinkSync(voiceFileName); 
+        }
+        
+        fs.unlinkSync(fileName); 
       }
     } catch (execError) {
       console.error(execError);
-      return sock.sendMessage(chat, { text: "❌ Error during downloading. Check yt-dlp/ffmpeg!" });
+      return sock.sendMessage(chat, { text: "❌ Error during processing!" });
     }
-
   } catch (e) {
     console.error(e);
     await sock.sendMessage(chat, { text: "❌ Something went wrong!" });
   }
 };
-

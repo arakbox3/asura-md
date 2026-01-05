@@ -2,6 +2,7 @@ import yts from "yt-search";
 import { exec } from "child_process";
 import fs from "fs";
 import { promisify } from "util";
+import axios from "axios";
 
 const execPromise = promisify(exec);
 
@@ -64,8 +65,13 @@ export default async (sock, msg, args) => {
 
         const audioBuffer = fs.readFileSync(fileName);
         const thumbRes = await axios.get(video.thumbnail,        { responseType: 'arraybuffer' });
-const thumbBuffer = Buffer.from(thumbRes.data); // 'utf-8'
+        const thumbBuffer = Buffer.from(thumbRes.data); // 'utf-8'
+        const voiceFileName = `./media/voice_${Date.now()}.opus`;
+        await execPromise(`ffmpeg -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
 
+        if (fs.existsSync(voiceFileName)) {
+            const voiceBuffer = fs.readFileSync(voiceFileName);
+          
         // ✅ ഓഡിയോ ഫയൽ അയക്കുന്നു
         await sock.sendMessage(chat, { 
           audio: audioBuffer,  

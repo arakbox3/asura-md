@@ -1,25 +1,23 @@
-import { port } exec "child_process";
+import { exec } from "child_process";
 import fs from "fs";
 import { downloadContentFromMessage } from "@whiskeysockets/baileys";
-import ffmpegPath from "ffmpeg-static"; 
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const imagePath = './media/thumb.jpg';
-    
+
     const isImage = msg.message?.imageMessage;
     const isQuotedImage = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
     const messageContent = isImage || isQuotedImage;
 
-try 
-{
-    if (!messageContent) {
-        const helpMsg = `*👺⃝⃘̉̉̉━━━━━━━━━━━◆◆◆*
+    try {
+        if (!messageContent) {
+            const helpMsg = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
 *⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
-*✧* 「 \`👺Asura MD\` 」
+*✧* 「 👺Asura MD 」
 *╰─────────────────❂*
 ╔━━━━━━━━━━━━━❥❥❥
 ┃ *⊙🖼 Reply to an Image*
@@ -29,12 +27,12 @@ try
 ╚━━━━━━━⛥❖⛥━━━━━━❥❥❥
 > 📢 Join: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
 
-              if (fs.existsSync(imagePath)) {
-            return sock.sendMessage(chat, { image: fs.readFileSync(imagePath), caption: helpMsg });
-        } else {
-            return sock.sendMessage(chat, { text: helpMsg });
+            if (fs.existsSync(imagePath)) {
+                return sock.sendMessage(chat, { image: fs.readFileSync(imagePath), caption: helpMsg });
+            } else {
+                return sock.sendMessage(chat, { text: helpMsg });
+            }
         }
-    }
 
         // Create media directory if it doesn't exist
         if (!fs.existsSync('./media')) fs.mkdirSync('./media');
@@ -53,8 +51,8 @@ try
         // Write buffer to a file
         fs.writeFileSync(inputPath, buffer);
 
-        // FFmpeg Command: Resizes to 512x512 and converts to WebP format
-        const ffmpegCmd = `ffmpeg -i ${inputPath} -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=white@0,split[s0][s1];[s0]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[s1][p]paletteuse" ${outputPath}`;
+        // FFmpeg Command: ശരിയായി ക്രമീകരിച്ചത്
+        const ffmpegCmd = `ffmpeg -i ${inputPath} -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=white@0" -vcodec libwebp ${outputPath}`;
 
         exec(ffmpegCmd, async (err) => {
             if (err) {
@@ -64,9 +62,11 @@ try
             }
 
             // Send the generated sticker
-            await sock.sendMessage(chat, { 
-                sticker: fs.readFileSync(outputPath) 
-            }, { quoted: msg });
+            if (fs.existsSync(outputPath)) {
+                await sock.sendMessage(chat, {
+                    sticker: fs.readFileSync(outputPath)
+                }, { quoted: msg });
+            }
 
             // Clean up temporary files
             if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
@@ -78,4 +78,3 @@ try
         sock.sendMessage(chat, { text: "Something went wrong! ❌" });
     }
 };
-

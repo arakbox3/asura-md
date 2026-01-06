@@ -1,9 +1,10 @@
 import yts from "yt-search";
-import axios from "axios";
+import ytdl from "ytdl-core";
 import fs from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
 import ffmpegPath from 'ffmpeg-static';
+import axios from "axios";
 
 const execPromise = promisify(exec);
 
@@ -20,7 +21,7 @@ export default async (sock, msg, args) => {
     const video = search.videos[0];
     if (!video) return sock.sendMessage(chat, { text: "❌ Song Not Found!" });
 
-    // നിങ്ങൾ തന്ന അതേ ഡിസൈൻ
+    // നിങ്ങളുടെ അതേ ഡിസൈൻ നിലനിർത്തുന്നു
     const infoText = `*👺⃝⃘̉̉━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -52,32 +53,22 @@ export default async (sock, msg, args) => {
     const fileName = `./media/audio_${Date.now()}.mp3`;
     const voiceFileName = `./media/voice_${Date.now()}.opus`;
 
-    // ✅ API വഴി ഡൗൺലോഡ് ലിങ്ക് എടുക്കുന്നു (Cookies ആവശ്യമില്ല)
-    const apiRes = await axios.get(`https://api.vkrhost.workers.dev/server?url=${video.url}`);
-    const downloadUrl = apiRes.data.data.find(f => f.format === "mp3" || f.ext === "mp3")?.url || apiRes.data.data[0].url;
-
-    if (!downloadUrl) throw new Error("Could not fetch download link");
-
-    // ഫയൽ താൽക്കാലികമായി ഡൗൺലോഡ് ചെയ്യുന്നു
-    const writer = fs.createWriteStream(fileName);
-    const response = await axios({
-      url: downloadUrl,
-      method: 'GET',
-      responseType: 'stream'
-    });
-
-    response.data.pipe(writer);
+    // ✅ API-യോ Cookies-ഓ ഇല്ലാതെ ytdl-core വഴി ഡൗൺലോഡ് ചെയ്യുന്നു
+    const stream = ytdl(video.url, {
+      quality: 'highestaudio',
+      filter: 'audioonly',
+    }).pipe(fs.createWriteStream(fileName));
 
     await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
+      stream.on('finish', resolve);
+      stream.on('error', reject);
     });
 
-    // തംബ്‌നെയിൽ ബഫർ ഉണ്ടാക്കുന്നു
+    // തംബ്‌നെയിൽ ബഫർ ഉണ്ടാക്കുന്നു (AdReply-ക്ക് വേണ്ടി)
     const thumbRes = await axios.get(video.thumbnail, { responseType: 'arraybuffer' });
     const thumbBuffer = Buffer.from(thumbRes.data);
 
-    // ✅ 1. ഓഡിയോ ഫയൽ അയക്കുന്നു (ExternalAdReply സഹിതം)
+    // ✅ 1. ഓഡിയോ ഫയൽ അയക്കുന്നു
     await sock.sendMessage(chat, {
       audio: fs.readFileSync(fileName),
       mimetype: "audio/mpeg",
@@ -95,8 +86,8 @@ export default async (sock, msg, args) => {
       }
     }, { quoted: msg });
 
-    // ✅ 2. വോയിസ് നോട്ട് ഉണ്ടാക്കി അയക്കുന്നു
-    await execPromise(`${ffmpegPath} -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
+    // ✅ 2. FFmpeg ഉപയോഗിച്ച് വോയിസ് നോട്ട് ഉണ്ടാക്കുന്നു
+    await execPromise(`"${ffmpegPath}" -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
     
     if (fs.existsSync(voiceFileName)) {
       await sock.sendMessage(chat, {
@@ -123,6 +114,6 @@ export default async (sock, msg, args) => {
 
   } catch (e) {
     console.error(e);
-    await sock.sendMessage(chat, { text: "❌ Error: " + e.message });
+    await sock.sendMessage(chat, { text: "❌ Error: YouTube സെർവർ തിരക്കിലാണ്. അല്പസമയത്തിന് ശേഷം വീണ്ടും ശ്രമിക്കൂ." });
   }
 };

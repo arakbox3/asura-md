@@ -1,10 +1,6 @@
 import yts from "yt-search";
-import { exec } from "child_process";
+import axios from "axios";
 import fs from "fs";
-import path from "path";
-import { promisify } from "util";
-
-const execPromise = promisify(exec);
 
 export default async (sock, msg, args) => {
   const chat = msg.key.remoteJid;
@@ -14,11 +10,6 @@ export default async (sock, msg, args) => {
     return sock.sendMessage(chat, { text: "Usage: .video <name or link>" });
   }
 
-  const mediaDir = './media';
-  if (!fs.existsSync(mediaDir)) {
-    fs.mkdirSync(mediaDir, { recursive: true });
-  }
-
   try {
     const search = await yts(searchText);
     const video = search.videos[0];
@@ -26,7 +17,7 @@ export default async (sock, msg, args) => {
     if (!video) {
       return sock.sendMessage(chat, { text: "Video Not Found 😢" });
     }
-
+    
     const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -46,29 +37,27 @@ export default async (sock, msg, args) => {
 
     await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
 
-    const fileName = path.join(mediaDir, `video_${Date.now()}.mp4`);
-
     try {
-      // Cookies ഇല്ലാതെ വർക്ക് ആകാൻ User-Agent ചേർക്കുന്നു
-      // --no-check-certificates സെർവർ എററുകൾ കുറയ്ക്കും
-      const ytDlpCommand = `python3 -m yt_dlp --no-check-certificates --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36" -f "best[ext=mp4][height<=480]" "${video.url}" -o "${fileName}"`;
+      //  API ഉപയോഗിക്കുന്നു
+      const apiUrl = `https://api.vkrhost.workers.dev/server?url=${video.url}`;
+      const response = await axios.get(apiUrl);
       
-      await execPromise(ytDlpCommand);
+      // വീഡിയോ ഫയലിന്റെ ലിങ്ക് കണ്ടെത്തുന്നു (480p അല്ലെങ്കിൽ ഏറ്റവും നല്ലത്)
+      const downloadUrl = response.data.data.find(f => f.format === "mp4" || f.ext === "mp4")?.url;
 
-      if (fs.existsSync(fileName)) {
+      if (downloadUrl) {
         await sock.sendMessage(chat, {
-          video: fs.readFileSync(fileName),
+          video: { url: downloadUrl },
           mimetype: 'video/mp4',
           caption: `*${video.title}*`
         }, { quoted: msg });
-
-        fs.unlinkSync(fileName);
       } else {
-        await sock.sendMessage(chat, { text: "❌ File download failed! File not found." });
+        await sock.sendMessage(chat, { text: "❌ ഡൗൺലോഡ് ലിങ്ക് ലഭ്യമല്ല! മറ്റൊരു വീഡിയോ ശ്രമിക്കൂ." });
       }
-    } catch (execError) {
-      console.error("Download Error:", execError);
-      await sock.sendMessage(chat, { text: "Error downloading video! ❌\nWait a moment and try again." });
+
+    } catch (apiError) {
+      console.error("API Error:", apiError);
+      await sock.sendMessage(chat, { text: "Error downloading video! ❌\nAPI ഡൗൺലോഡിൽ പ്രശ്നമുണ്ട്." });
     }
 
   } catch (err) {

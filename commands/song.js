@@ -5,7 +5,6 @@ import { promisify } from "util";
 import axios from "axios";
 import ffmpegPath from 'ffmpeg-static';
 
-const ffmpeg = ffmpegPath; 
 const execPromise = promisify(exec);
 
 export default async (sock, msg, args) => {
@@ -50,12 +49,15 @@ export default async (sock, msg, args) => {
       caption: infoText
     });
 
+    // മീഡിയ ഫോൾഡർ ഉണ്ടെന്ന് ഉറപ്പാക്കുന്നു
+    if (!fs.existsSync('./media')) fs.mkdirSync('./media');
+
     const fileName = `./media/audio_${Date.now()}.mp3`;
     const voiceFileName = `./media/voice_${Date.now()}.opus`;
 
     // 3. ഡൗൺലോഡ് പ്രോസസ്സ്
     try {
-      // Render-ൽ python3 -m yt_dlp ഉപയോഗിക്കുന്നത് എറർ ഒഴിവാക്കാൻ സഹായിക്കും
+      // Render-ൽ yt-dlp കൃത്യമായി വർക്ക് ആകാൻ ഫുൾ പാത്ത് അല്ലെങ്കിൽ python3 -m ഉപയോഗിക്കുന്നു
       await execPromise(`python3 -m yt_dlp -x --audio-format mp3 --audio-quality 0 "${video.url}" -o "${fileName}"`);
 
       if (fs.existsSync(fileName)) {
@@ -70,8 +72,8 @@ export default async (sock, msg, args) => {
         const thumbRes = await axios.get(video.thumbnail, { responseType: 'arraybuffer' });
         const thumbBuffer = Buffer.from(thumbRes.data);
 
-        // FFmpeg ഉപയോഗിച്ച് വോയിസ് നോട്ടിലേക്ക് മാറ്റുന്നു
-        await execPromise(`ffmpeg -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
+        // FFmpeg-static പാത്ത് ഉപയോഗിച്ച് വോയിസ് നോട്ടിലേക്ക് മാറ്റുന്നു
+        await execPromise(`${ffmpegPath} -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
 
         // ✅ 1. ഓഡിയോ ഫയൽ അയക്കുന്നു
         await sock.sendMessage(chat, {
@@ -113,10 +115,12 @@ export default async (sock, msg, args) => {
         }
 
         fs.unlinkSync(fileName);
+      } else {
+         throw new Error("File not found after download");
       }
     } catch (execError) {
       console.error("Execution Error:", execError);
-      return sock.sendMessage(chat, { text: "❌ Error during processing! Make sure yt-dlp and ffmpeg are installed." });
+      return sock.sendMessage(chat, { text: `❌ Processing Error: ${execError.message}` });
     }
   } catch (e) {
     console.error("Main Error:", e);

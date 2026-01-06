@@ -21,7 +21,7 @@ export default async (sock, msg, args) => {
     const video = search.videos[0];
     if (!video) return sock.sendMessage(chat, { text: "❌ Song Not Found!" });
 
-    // നിങ്ങളുടെ അതേ ഡിസൈൻ നിലനിർത്തുന്നു
+    // ഡിസൈൻ ഒട്ടും മാറ്റമില്ലാതെ നിലനിർത്തുന്നു
     const infoText = `*👺⃝⃘̉̉━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -53,67 +53,76 @@ export default async (sock, msg, args) => {
     const fileName = `./media/audio_${Date.now()}.mp3`;
     const voiceFileName = `./media/voice_${Date.now()}.opus`;
 
-    // ✅ API-യോ Cookies-ഓ ഇല്ലാതെ ytdl-core വഴി ഡൗൺലോഡ് ചെയ്യുന്നു
-    const stream = ytdl(video.url, {
-      quality: 'highestaudio',
-      filter: 'audioonly',
-    }).pipe(fs.createWriteStream(fileName));
+    // ⬇️ ഡൗൺലോഡ് പ്രോസസ്സ്
+    const downloadVideo = () => {
+      return new Promise((resolve, reject) => {
+        const stream = ytdl(video.url, { quality: 'highestaudio', filter: 'audioonly' });
+        const fileStream = fs.createWriteStream(fileName);
+        stream.pipe(fileStream);
+        fileStream.on('finish', () => resolve());
+        fileStream.on('error', (err) => reject(err));
+      });
+    };
 
-    await new Promise((resolve, reject) => {
-      stream.on('finish', resolve);
-      stream.on('error', reject);
-    });
+    await downloadVideo();
 
-    // തംബ്‌നെയിൽ ബഫർ ഉണ്ടാക്കുന്നു (AdReply-ക്ക് വേണ്ടി)
+    // തംബ്‌നെയിൽ ബഫർ
     const thumbRes = await axios.get(video.thumbnail, { responseType: 'arraybuffer' });
     const thumbBuffer = Buffer.from(thumbRes.data);
 
-    // ✅ 1. ഓഡിയോ ഫയൽ അയക്കുന്നു
-    await sock.sendMessage(chat, {
-      audio: fs.readFileSync(fileName),
-      mimetype: "audio/mpeg",
-      fileName: `${video.title}.mp3`,
-      contextInfo: {
-        externalAdReply: {
-          title: video.title,
-          body: 'Asura MD 👺',
-          thumbnail: thumbBuffer,
-          thumbnailUrl: video.thumbnail,
-          mediaType: 1,
-          sourceUrl: video.url,
-          renderLargerThumbnail: true,
-        }
-      }
-    }, { quoted: msg });
-
-    // ✅ 2. FFmpeg ഉപയോഗിച്ച് വോയിസ് നോട്ട് ഉണ്ടാക്കുന്നു
-    await execPromise(`"${ffmpegPath}" -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
-    
-    if (fs.existsSync(voiceFileName)) {
-      await sock.sendMessage(chat, {
-        audio: fs.readFileSync(voiceFileName),
-        mimetype: "audio/ogg; codecs=opus",
-        ptt: true,
-        contextInfo: {
-          externalAdReply: {
-            title: video.title,
-            body: 'Asura MD 👺',
-            thumbnail: thumbBuffer,
-            thumbnailUrl: video.thumbnail,
-            mediaType: 1,
-            sourceUrl: video.url,
-            renderLargerThumbnail: true,
-          }
-        }
-      }, { quoted: msg });
-      
-      fs.unlinkSync(voiceFileName);
+    // ✅ 1. ഓഡിയോ അയക്കുന്നു
+    if (fs.existsSync(fileName)) {
+        await sock.sendMessage(chat, {
+            audio: fs.readFileSync(fileName),
+            mimetype: "audio/mpeg",
+            fileName: `${video.title}.mp3`,
+            contextInfo: {
+                externalAdReply: {
+                    title: video.title,
+                    body: 'Asura MD 👺',
+                    thumbnail: thumbBuffer,
+                    mediaType: 1,
+                    sourceUrl: video.url,
+                    renderLargerThumbnail: true,
+                }
+            }
+        }, { quoted: msg });
     }
 
-    fs.unlinkSync(fileName);
+    // ✅ 2. വോയിസ് നോട്ട് കൺവർട്ട് ചെയ്ത് അയക്കുന്നു
+    // FFmpeg പാത്ത് ശരിയാണെന്ന് ഉറപ്പുവരുത്തുന്നു
+    try {
+        await execPromise(`"${ffmpegPath}" -i "${fileName}" -c:a libopus -ar 16000 -ac 1 "${voiceFileName}"`);
+        
+        if (fs.existsSync(voiceFileName)) {
+            await sock.sendMessage(chat, {
+                audio: fs.readFileSync(voiceFileName),
+                mimetype: "audio/ogg; codecs=opus",
+                ptt: true,
+                contextInfo: {
+                    externalAdReply: {
+                        title: video.title,
+                        body: 'Asura MD 👺',
+                        thumbnail: thumbBuffer,
+                        mediaType: 1,
+                        sourceUrl: video.url,
+                        renderLargerThumbnail: true,
+                    }
+                }
+            }, { quoted: msg });
+            
+            fs.unlinkSync(voiceFileName);
+        }
+    } catch (ffmpegErr) {
+        console.error("FFmpeg Error:", ffmpegErr);
+        // വോയിസ് നോട്ടിൽ മാത്രം എറർ വന്നാൽ ഓഡിയോ അയച്ചതുകൊണ്ട് യൂസർക്ക് പാട്ട് കിട്ടും.
+    }
+
+    if (fs.existsSync(fileName)) fs.unlinkSync(fileName);
 
   } catch (e) {
     console.error(e);
-    await sock.sendMessage(chat, { text: "❌ Error: YouTube സെർവർ തിരക്കിലാണ്. അല്പസമയത്തിന് ശേഷം വീണ്ടും ശ്രമിക്കൂ." });
+    await sock.sendMessage(chat, { text: "❌ Error: ." });
   }
 };
+

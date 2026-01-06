@@ -1,5 +1,5 @@
 import yts from "yt-search";
-import ytdl from "@distube/ytdl-core"; 
+import ytdl from "@distube/ytdl-core";
 
 export default async (sock, msg, args) => {
   const chat = msg.key.remoteJid;
@@ -34,38 +34,34 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // തംബ്‌നെയിൽ അയക്കുന്നു
-    await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText }, { quoted: msg });
+    // 1. ഫോട്ടോയും ഡിസൈനും അയക്കുന്നു
+    await sock.sendMessage(chat, { 
+      image: { url: video.thumbnail }, 
+      caption: captionText 
+    }, { quoted: msg });
 
-    // വീഡിയോ ഡൗൺലോഡ് ചെയ്യാതെ നേരിട്ട് സ്ട്രീം ചെയ്യുന്നു
-    const stream = ytdl(video.url, {
-        filter: 'reverbDelay', // Video + Audio രണ്ടും ലഭിക്കാൻ
-        quality: 'highestvideo',
+    // 2. വീഡിയോയുടെ ഡയറക്ട് ലിങ്ക് എടുക്കുന്നു
+    const info = await ytdl.getInfo(video.url);
+    
+    // സാധാരണ വാട്സാപ്പിന് സപ്പോർട്ട് ആകുന്ന 360p അല്ലെങ്കിൽ ഏറ്റവും നല്ല ക്വാളിറ്റി വീഡിയോ ലിങ്ക് എടുക്കുന്നു
+    const format = ytdl.chooseFormat(info.formats, { 
+      filter: 'videoandaudio', 
+      quality: '18' // 360p mp4 (ഏറ്റവും നല്ലത് ഇതാണ്)
     });
 
-    // ബഫർ വഴി വീഡിയോ അയക്കുന്നു
-    let chunks = [];
-    stream.on('data', (chunk) => {
-        chunks.push(chunk);
-    });
-
-    stream.on('end', async () => {
-        const videoBuffer = Buffer.concat(chunks);
-        await sock.sendMessage(chat, {
-            video: videoBuffer,
-            mimetype: 'video/mp4',
-            caption: `*${video.title}*`
-        }, { quoted: msg });
-    });
-
-    stream.on('error', (err) => {
-        console.error("Stream Error:", err);
-        sock.sendMessage(chat, { text: "Error downloading video. ❌" });
-    });
+    if (format && format.url) {
+      // ✅ ഡൗൺലോഡ് ചെയ്ത് തീരാൻ നിൽക്കാതെ നേരിട്ട് URL വഴി വീഡിയോ അയക്കുന്നു
+      await sock.sendMessage(chat, {
+        video: { url: format.url },
+        mimetype: 'video/mp4',
+        caption: `*${video.title}*`
+      }, { quoted: msg });
+    } else {
+      throw new Error("No format found");
+    }
 
   } catch (err) {
     console.error("Main Error:", err);
-    await sock.sendMessage(chat, { text: "Something went wrong! 😢" });
+    await sock.sendMessage(chat, { text: "Error! 😢" });
   }
 };
-

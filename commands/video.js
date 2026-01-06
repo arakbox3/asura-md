@@ -1,7 +1,6 @@
 import yts from "yt-search";
 import ytdl from "ytdl-core";
 import fs from "fs";
-import path from "path";
 
 export default async (sock, msg, args) => {
   const chat = msg.key.remoteJid;
@@ -19,7 +18,7 @@ export default async (sock, msg, args) => {
       return sock.sendMessage(chat, { text: "Video Not Found 😢" });
     }
 
-    // നിങ്ങളുടെ പഴയ അതേ ഡിസൈൻ
+    // ഡിസൈൻ ഒട്ടും മാറ്റമില്ലാതെ നിലനിർത്തുന്നു
     const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -32,35 +31,41 @@ export default async (sock, msg, args) => {
  ⊙📺 *CHANNEL:* ${video.author.name}
  ⊙👀 *VIEWS:* ${video.views}
  ⊙⏳ *AGO:* ${video.ago}
-*◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
+*◀︎ •၊၊||၊||||။‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
+    // ആദ്യം തംബ്‌നെയിലും വിവരങ്ങളും അയക്കുന്നു
+    await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText }, { quoted: msg });
 
-    const fileName = `./media/video_${Date.now()}.mp4`;
+    const fileName = `./media/${Date.now()}.mp4`;
 
-    // വീഡിയോ ഡൗൺലോഡ് ചെയ്യുന്നു (ytdl-core ഉപയോഗിച്ച്)
-    const stream = ytdl(video.url, {
-      quality: 'highestvideo',
-      filter: format => format.container === 'mp4' && format.hasAudio && format.hasVideo
-    }).pipe(fs.createWriteStream(fileName));
+    // വീഡിയോ സ്ട്രീം എടുക്കുന്നു (360p അല്ലെങ്കിൽ mp4 കിട്ടാൻ വേണ്ടിയുള്ള ഫിൽട്ടർ)
+    const videoStream = ytdl(video.url, {
+      filter: 'handy', // വീഡിയോയും ഓഡിയോയും ഒരുമിച്ച് കിട്ടാൻ (360p/480p)
+      quality: 'highest',
+    });
 
-    stream.on('finish', async () => {
+    const fileWriter = fs.createWriteStream(fileName);
+    videoStream.pipe(fileWriter);
+
+    fileWriter.on('finish', async () => {
+      // വീഡിയോ അയക്കുന്നു
       await sock.sendMessage(chat, {
         video: fs.readFileSync(fileName),
         mimetype: 'video/mp4',
-        caption: `*${video.title}*`
+        caption: `*${video.title}*`,
+        headerType: 4
       }, { quoted: msg });
 
       // അയച്ചതിന് ശേഷം ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
       if (fs.existsSync(fileName)) fs.unlinkSync(fileName);
     });
 
-    stream.on('error', (err) => {
+    videoStream.on('error', (err) => {
       console.error("YTDL Error:", err);
-      sock.sendMessage(chat, { text: "ഡൗൺലോഡ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു! ❌" });
+      sock.sendMessage(chat, { text: "Error. ❌" });
     });
 
   } catch (err) {

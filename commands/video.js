@@ -2,8 +2,10 @@ import yts from "yt-search";
 import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
+import ffmpegPath from 'ffmpeg-static';
 
 export default async (sock, msg, args) => {
+  const ffmpeg = ffmpegPath; 
   const chat = msg.key.remoteJid;
   const searchText = args.join(" ");
 

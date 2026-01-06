@@ -2,10 +2,12 @@ import yts from "yt-search";
 import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
+import { promisify } from "util";
 import ffmpegPath from 'ffmpeg-static';
 
+const execPromise = promisify(exec);
+
 export default async (sock, msg, args) => {
-  const ffmpeg = ffmpegPath; 
   const chat = msg.key.remoteJid;
   const searchText = args.join(" ");
 
@@ -13,8 +15,13 @@ export default async (sock, msg, args) => {
     return sock.sendMessage(chat, { text: "Usage: .video <name or link>" });
   }
 
+  // 1. മീഡിയ ഫോൾഡർ ഉണ്ടെന്ന് ഉറപ്പാക്കുന്നു
+  const mediaDir = './media';
+  if (!fs.existsSync(mediaDir)) {
+    fs.mkdirSync(mediaDir, { recursive: true });
+  }
+
   try {
-    // 1. വീഡിയോ സെർച്ച് ചെയ്യുന്നു
     const search = await yts(searchText);
     const video = search.videos[0];
 
@@ -43,14 +50,11 @@ export default async (sock, msg, args) => {
     await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
 
     // 3. വീഡിയോ ഡൗൺലോഡ് ചെയ്യുന്നു
-    const fileName = `./media/video_${Date.now()}.mp4`;
+    const fileName = path.join(mediaDir, `video_${Date.now()}.mp4`);
 
-    // Render-ൽ yt-dlp കൃത്യമായി പ്രവർത്തിക്കാൻ 'python3 -m yt_dlp' ഉപയോഗിക്കുന്നതാണ് നല്ലത്
-    exec(`python3 -m yt_dlp -f "best[ext=mp4][height<=480]" "${video.url}" -o "${fileName}"`, async (error) => {
-      if (error) {
-        console.error("Download Error:", error);
-        return sock.sendMessage(chat, { text: "Error downloading video! ❌\nMake sure yt-dlp is installed." });
-      }
+    try {
+      // Render-ൽ python3 -m yt_dlp ഉപയോഗിച്ച് നിർബന്ധമായും ഡൗൺലോഡ് ചെയ്യിക്കുന്നു
+      await execPromise(`python3 -m yt_dlp -f "best[ext=mp4][height<=480]" "${video.url}" -o "${fileName}"`);
 
       // 4. വീഡിയോ അയക്കുന്നു
       if (fs.existsSync(fileName)) {
@@ -63,12 +67,15 @@ export default async (sock, msg, args) => {
         // അയച്ചു കഴിഞ്ഞാൽ ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
         fs.unlinkSync(fileName);
       } else {
-        sock.sendMessage(chat, { text: "❌ File download failed!" });
+        await sock.sendMessage(chat, { text: "❌ File download failed! File not found." });
       }
-    });
+    } catch (execError) {
+      console.error("Download Error:", execError);
+      await sock.sendMessage(chat, { text: "Error downloading video! ❌\nMake sure yt-dlp is installed in Render Settings." });
+    }
 
   } catch (err) {
     console.error("Main Error:", err);
-    sock.sendMessage(chat, { text: "Something went wrong! 😢" });
+    await sock.sendMessage(chat, { text: "Something went wrong! 😢" });
   }
 };

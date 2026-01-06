@@ -3,7 +3,6 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
-import ffmpegPath from 'ffmpeg-static';
 
 const execPromise = promisify(exec);
 
@@ -15,7 +14,6 @@ export default async (sock, msg, args) => {
     return sock.sendMessage(chat, { text: "Usage: .video <name or link>" });
   }
 
-  // 1. മീഡിയ ഫോൾഡർ ഉണ്ടെന്ന് ഉറപ്പാക്കുന്നു
   const mediaDir = './media';
   if (!fs.existsSync(mediaDir)) {
     fs.mkdirSync(mediaDir, { recursive: true });
@@ -46,17 +44,17 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // 2. തംബ്‌നെയിൽ അയക്കുന്നു
     await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
 
-    // 3. വീഡിയോ ഡൗൺലോഡ് ചെയ്യുന്നു
     const fileName = path.join(mediaDir, `video_${Date.now()}.mp4`);
 
     try {
-      // Render-ൽ python3 -m yt_dlp ഉപയോഗിച്ച് നിർബന്ധമായും ഡൗൺലോഡ് ചെയ്യിക്കുന്നു
-      await execPromise(`python3 -m yt_dlp -f "best[ext=mp4][height<=480]" "${video.url}" -o "${fileName}"`);
+      // Cookies ഇല്ലാതെ വർക്ക് ആകാൻ User-Agent ചേർക്കുന്നു
+      // --no-check-certificates സെർവർ എററുകൾ കുറയ്ക്കും
+      const ytDlpCommand = `python3 -m yt_dlp --no-check-certificates --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36" -f "best[ext=mp4][height<=480]" "${video.url}" -o "${fileName}"`;
+      
+      await execPromise(ytDlpCommand);
 
-      // 4. വീഡിയോ അയക്കുന്നു
       if (fs.existsSync(fileName)) {
         await sock.sendMessage(chat, {
           video: fs.readFileSync(fileName),
@@ -64,14 +62,13 @@ export default async (sock, msg, args) => {
           caption: `*${video.title}*`
         }, { quoted: msg });
 
-        // അയച്ചു കഴിഞ്ഞാൽ ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
         fs.unlinkSync(fileName);
       } else {
         await sock.sendMessage(chat, { text: "❌ File download failed! File not found." });
       }
     } catch (execError) {
       console.error("Download Error:", execError);
-      await sock.sendMessage(chat, { text: "Error downloading video! ❌\nMake sure yt-dlp is installed in Render Settings." });
+      await sock.sendMessage(chat, { text: "Error downloading video! ❌\nWait a moment and try again." });
     }
 
   } catch (err) {

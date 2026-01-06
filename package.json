@@ -22,7 +22,7 @@
     "g-i-s": "latest",
     "ytdl-core": "latest",  
     "wa-sticker-formatter": "latest",
-    "nayan-font-generator" : "latest",
+    "@fshangala/fancy-text": "latest"
     "qrcode-terminal": "latest"
   }
 }

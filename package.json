@@ -20,6 +20,7 @@
     "jimp": "latest",
     "node-fetch": "latest",
     "g-i-s": "latest",
+    "ytdl-core": "latest",  
     "wa-sticker-formatter": "latest",
     "qrcode-terminal": "latest"
   }

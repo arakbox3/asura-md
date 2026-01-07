@@ -1,5 +1,6 @@
 import fs from 'fs';
 
+// ബോട്ട് സ്റ്റാർട്ട് ചെയ്ത സമയം
 const startTime = Date.now();
 
 export default async (sock, msg, args) => {
@@ -14,15 +15,14 @@ export default async (sock, msg, args) => {
         const { key } = await sock.sendMessage(from, { text: "🚀 Checking System..." });
 
         const frames = [
-            "🏮 Analyzing Server...",
-            "🏮 Calculating Ping...",
-            "🏮 Fetching Uptime...",
+            "📶 Analyzing Server...",
+            "📡 Calculating Ping...",
+            "⏳ Fetching Uptime...",
             "👺 Asura MD Engine Ready!"
         ];
 
         for (let frame of frames) {
             await new Promise(resolve => setTimeout(resolve, 1000)); 
-
             await sock.sendMessage(from, { text: frame, edit: key });
         }
 
@@ -38,12 +38,13 @@ export default async (sock, msg, args) => {
         const seconds = Math.floor((diff / 1000) % 60);
         const uptimeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
+        // ഇതാ നിങ്ങളുടെ അതേ ഡിസൈൻ (Syntax Fixed)
         const pingMsg = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
 *⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
-*✧* 「 `👺Asura MD` 」
+*✧* 「 \`👺Asura MD\` 」
 *╰────────────────❂*
 *Hello! I'm Asura MD, your fastest Assistant! ✨*
 
@@ -56,7 +57,7 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-        // 4. പഴയ എഡിറ്റ് മെസ്സേജ് മാറ്റി ഫൈനൽ ഇമേജും ഡിസൈനും അയക്കുന്നു
+        // 4. ഫൈനൽ ഇമേജും ഡിസൈനും അയക്കുന്നു
         if (fs.existsSync(imagePath)) {
             await sock.sendMessage(from, { 
                 image: fs.readFileSync(imagePath), 
@@ -66,8 +67,10 @@ export default async (sock, msg, args) => {
             await sock.sendMessage(from, { text: pingMsg }, { quoted: msg });
         }
 
+        // Animation delete 
+        await sock.sendMessage(from, { delete: key });
+
     } catch (e) {
         console.error("Ping Error:", e);
     }
 };
-

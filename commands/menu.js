@@ -20,6 +20,7 @@ const songPath = './media/song.opus';
 ┃ *⊙  .Video  <name>*
 ┃ *⊙  .Sticker*
 ┃ *⊙  .Game*
+┃ *⊙  .Fun*
 ┃ *⊙  .Font <text>*
 ┃ *⊙  .Owner*
 ┃ *⊙  .Play <name>*
@@ -64,6 +65,8 @@ const songPath = './media/song.opus';
             console.log("Menu audio file not found!");
         }
 
+        await sock.sendMessage(from, { react: { text: "✅", key: msg.key } });
+        
     } catch (error) {
         console.error("Error in menu command:", error);
     }

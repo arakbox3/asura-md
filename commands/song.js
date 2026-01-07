@@ -48,28 +48,28 @@ export default async (sock, msg, args) => {
 
     let audioUrl = null;
 
-    // --- API 1: Siputzx (Powerful & High Speed) ---
+    // --- API 1:  (Powerful & High Speed) ---
     try {
-        const res1 = await axios.get(`https://api.siputzx.my.id/api/dwnld/ytmp3?url=${video.url}`);
+        const res1 = await axios.get(`https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(video.url)}`);
         audioUrl = res1.data.data.dl; 
     } catch (e) {
         console.log("API 1 Failed");
     }
 
-    // --- API 2: Decypher (Fallback 1) ---
+    // --- API 2:  (Fallback 1) ---
     if (!audioUrl) {
         try {
-            const res2 = await axios.get(`https://api.decypher.biz.id/api/download/ytmp3?url=${video.url}`);
+            const res2 = await axios.get(`https://izumiiiiiiii.dpdns.org/downloader/youtube?url=${encodeURIComponent(video.url)}&format=360`);
             audioUrl = res2.data.result.downloadUrl;
         } catch (e) {
             console.log("API 2 Failed");
         }
     }
 
-    // --- API 3: Ryzen (Fallback 2) ---
+    // --- API 3: (Fallback 2) ---
     if (!audioUrl) {
         try {
-            const res3 = await axios.get(`https://api.ryzendesu.vip/api/downloader/ytmp3?url=${video.url}`);
+            const res3 = await axios.get(`https://api.cobalt.tools/api/json`);
             audioUrl = res3.data.url;
         } catch (e) {
             console.log("API 3 Failed");

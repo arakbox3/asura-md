@@ -50,7 +50,7 @@ export default async (sock, msg, args) => {
 
     // --- API 1:  (Powerful & High Speed) ---
     try {
-        const res1 = await axios.get(`https://yt-api.org/button/mp3/YOUTUBE_ID`);
+        const res1 = await axios.get(`https://izumiiiiiiii.dpdns.org/downloader/youtube-play?query=${encodeURIComponent(query)}`);
         audioUrl = res1.data.data.dl; 
     } catch (e) {
         console.log("API 1 Failed");
@@ -59,7 +59,7 @@ export default async (sock, msg, args) => {
     // --- API 2:  (Fallback 1) ---
     if (!audioUrl) {
         try {
-            const res2 = await axios.get(`https://apisyu.com/single/mp3/VIDEO_ID`);
+            const res2 = await axios.get(`https://apis-keith.vercel.app/download/dlmp3?url=${urlYt}`);
             audioUrl = res2.data.result.downloadUrl;
         } catch (e) {
             console.log("API 2 Failed");
@@ -69,7 +69,7 @@ export default async (sock, msg, args) => {
     // --- API 3: (Fallback 2) ---
     if (!audioUrl) {
         try {
-            const res3 = await axios.get(`https://www.yt2mp3converter.net/apis/fetch.php?url=VIDEO_URL&format=mp3`);
+            const res3 = await axios.get(`https://okatsu-rolezapiiz.vercel.app/downloader/ytmp3?url=${encodeURIComponent(youtubeUrl)}`);
             audioUrl = res3.data.url;
         } catch (e) {
             console.log("API 3 Failed");

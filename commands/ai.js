@@ -1,6 +1,5 @@
 import axios from 'axios';
 import fs from 'fs';
-import path from 'fs';
 
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
@@ -10,30 +9,33 @@ export default async (sock, msg, args) => {
         return sock.sendMessage(from, { text: "❌ Please provide a description!" });
     }
 
+    // media confirming 
+    if (!fs.existsSync('./media')) {
+        fs.mkdirSync('./media');
+    }
+
     try {
         await sock.sendMessage(from, { react: { text: "🎨", key: msg.key } });
 
-        // ആനിമേഷൻ
         const { key } = await sock.sendMessage(from, { text: "🚀 Asura AI is imagining..." });
         await new Promise(resolve => setTimeout(resolve, 1000));
         await sock.sendMessage(from, { text: "👺 Asura MD AI Artwork Ready!", edit: key });
 
         const aiUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Math.floor(Math.random() * 100000)}`;
         
-        // 🛠️ ഇമേജ് നേരിട്ട് സെർവറിലേക്ക് ഡൗൺലോഡ് ചെയ്യുന്നു
         const tempPath = `./media/ai_${Date.now()}.jpg`;
+        
         const response = await axios({
             method: 'get',
             url: aiUrl,
             responseType: 'stream'
         });
 
-        // ഫയൽ എഴുതുന്നു
         const writer = fs.createWriteStream(tempPath);
         response.data.pipe(writer);
 
         writer.on('finish', async () => {
-        const aiMsg = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
+            const aiMsg = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
@@ -53,23 +55,18 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-            // ഫയൽ ആയി അയക്കുന്നു
             await sock.sendMessage(from, { 
                 image: fs.readFileSync(tempPath), 
                 caption: aiMsg 
             }, { quoted: msg });
 
-            // അയച്ചതിന് ശേഷം ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു (മെമ്മറി സേവ് ചെയ്യാൻ)
+            // ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
             fs.unlinkSync(tempPath);
             await sock.sendMessage(from, { react: { text: "✅", key: msg.key } });
         });
 
-        writer.on('error', (err) => {
-            throw err;
-        });
-
     } catch (e) {
         console.error("AI Error:", e);
-        await sock.sendMessage(from, { text: "❌ Error!});
+        await sock.sendMessage(from, { text: "❌ Error! AI server down." });
     }
 };

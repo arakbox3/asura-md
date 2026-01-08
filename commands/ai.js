@@ -5,44 +5,48 @@ export default async (sock, msg, args) => {
     const text = args.join(" ");
 
     if (!text) {
-        return sock.sendMessage(from, { text: "❌ Please provide a prompt!\nExample: .ai a futuristic city" });
+        return sock.sendMessage(from, { text: "❌ Please provide a question!\nExample: .ai who is Cristiano Ronaldo?" });
     }
+
+    // Thinking മെസ്സേജ് വേരിയബിൾ ആദ്യം തന്നെ ഡിക്ലയർ ചെയ്യുന്നു
+    let thinkingMsg;
 
     try {
         // 1. റിയാക്ഷൻ നൽകുന്നു
-        await sock.sendMessage(from, { react: { text: "🎨", key: msg.key } });
+        await sock.sendMessage(from, { react: { text: "🧠", key: msg.key } });
 
-        // 2. ആനിമേഷൻ മെസ്സേജ്
-        const { key } = await sock.sendMessage(from, { text: "👺 Asura AI is generating Text & Image..." });
+        // 2. ആനിമേഷൻ (Thinking...)
+        thinkingMsg = await sock.sendMessage(from, { text: "👺 Asura MD is thinking..." });
 
-        // 3. AI Text & Image ഒന്നിച്ചു Fetch ചെയ്യുന്നു (Promise.all വഴി സ്പീഡ് കൂട്ടാം)
-        const [textRes, imgRes] = await Promise.all([
-            axios.get(`https://api.hercai.onrender.com/v3/hercai?question=${encodeURIComponent(text)}`),
-            axios.get(`https://api.hercai.onrender.com/v3/hercai-is?question=${encodeURIComponent(text)}`)
-        ]);
+        // 3. AI API (Universal API - Supports Malayalam & other languages)
+        const response = await axios.get(`https://itzpire.com/ai/gpt-web?q=${encodeURIComponent(text)}`);
+        
+        // API response 
+        const aiResponse = response.data.data;
 
-        const aiReply = textRes.data.reply;
-        const aiImage = imgRes.data.url; // API നൽകുന്ന ഇമേജ് ലിങ്ക്
+        const aiMsg = `
+${aiResponse}
 
-        const caption = `
-${aiReply}
+ ⊙ 𝚀𝚞𝚎𝚛𝚢 : ${text.length > 20 ? text.substring(0, 20) + "..." : text}
 
- ⊙ 𝚀𝚞𝚎𝚛𝚢 : ${text}
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-        // 4. ആദ്യം ടെക്സ്റ്റ് മെസ്സേജ് എഡിറ്റ് ചെയ്ത് മാറ്റുന്നു (അല്ലെങ്കിൽ ഡിലീറ്റ് ചെയ്യാം)
-        await sock.sendMessage(from, { delete: key });
-
-        // 5. ഫൈനൽ ഔട്ട്‌പുട്ട്: ഇമേജും അതിന്റെ കൂടെ ടെക്സ്റ്റ് ക്യാപ്‌ഷനും
+        // 4. ഫൈനൽ മെസ്സേജ് എഡിറ്റ് ചെയ്ത് അയക്കുന്നു
         await sock.sendMessage(from, { 
-            image: { url: aiImage }, 
-            caption: caption 
-        }, { quoted: msg });
-
+            text: aiMsg, 
+            edit: thinkingMsg.key 
+        });
+        
         await sock.sendMessage(from, { react: { text: "✅", key: msg.key } });
 
     } catch (e) {
-        console.error("Asura AI Error:", e);
-        await sock.sendMessage(from, { text: "❌ Sorry, I couldn't generate that." });
+        console.error("AI Chat Error:", e);
+        const errorText = "❌ API Error! Please try again later.";
+        
+        if (thinkingMsg) {
+            await sock.sendMessage(from, { text: errorText, edit: thinkingMsg.key });
+        } else {
+            await sock.sendMessage(from, { text: errorText });
+        }
     }
 };

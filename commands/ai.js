@@ -4,17 +4,15 @@ import fs from 'fs';
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
     const prompt = args.join(" ");
-    const imagePath = './media/thumb.jpg'; // നിങ്ങളുടെ തംബ്‌നെയിൽ പാത്ത്
+    const imagePath = './media/thumb.jpg'; 
 
     if (!prompt) {
         return sock.sendMessage(from, { text: "❌ Please provide a description!\nExample: .ai a cute cat wearing a crown" });
     }
 
     try {
-        // 1. റിയാക്ഷൻ നൽകുന്നു
         await sock.sendMessage(from, { react: { text: "🎨", key: msg.key } });
 
-        // 2. ആനിമേഷൻ (മറ്റാരും ചെയ്യാത്ത സ്റ്റൈൽ)
         const { key } = await sock.sendMessage(from, { text: "🚀 Asura AI is imagining your request..." });
         
         const loadingFrames = [
@@ -25,16 +23,16 @@ export default async (sock, msg, args) => {
         ];
 
         for (let frame of loadingFrames) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 1200));
             await sock.sendMessage(from, { text: frame, edit: key });
         }
 
-        // 3. AI ഇമേജ് API (Pollinations AI - No API Key Needed)
         const aiUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Math.floor(Math.random() * 100000)}`;
+        
+        // ഇമേജ് ഡൗൺലോഡ് ചെയ്യുന്നു
         const response = await axios.get(aiUrl, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
         
-        // ഡിസൈൻ ക്യാപ്ഷൻ
         const aiMsg = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -55,15 +53,14 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-        // 4. ഇമേജ് അയക്കുന്നു (Thumbnail ഫയൽ സപ്പോർട്ടോടു കൂടി)
+        // 🚀 image formats change
         await sock.sendMessage(from, { 
             image: buffer, 
             caption: aiMsg,
-            mimetype: 'image/jpeg',
-            jpegThumbnail: fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : null
+            mimetype: 'image/jpeg' 
+
         }, { quoted: msg });
 
-        // റിയാക്ഷൻ മാറ്റുന്നു
         await sock.sendMessage(from, { react: { text: "✅", key: msg.key } });
 
     } catch (e) {

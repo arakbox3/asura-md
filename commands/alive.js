@@ -23,7 +23,8 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    try {
+   try {
+        // 1. മെയിൻ അലൈവ് മെസ്സേജ് അയക്കുന്നു
         if (fs.existsSync(imagePath)) {
             await sock.sendMessage(chat, { 
                 image: fs.readFileSync(imagePath), 
@@ -32,33 +33,31 @@ export default async (sock, msg, args) => {
         } else {
             await sock.sendMessage(chat, { text: aliveMsg }, { quoted: msg });
         }
-      
-          if (Math.random() < 0.2) { 
-    const groupLink = "https://chat.whatsapp.com/LC3HXrnNI8J0481tjPTbtp";
-    const adMsg = `🏮 *Join our Community:*
+
+        // 2. ഗ്രൂപ്പ് ലിങ്ക് പരസ്യം (എപ്പോഴും അയക്കുന്നു)
+        const groupLink = "https://chat.whatsapp.com/LC3HXrnNI8J0481tjPTbtp";
+        const adMsg = `🏮 *Join our Community:*
 Stay updated with Asura MD 
 
 ${groupLink}
 
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    await sock.sendMessage(from, { 
-        text: adMsg,
-        contextInfo: {
-            externalAdReply: {
-                title: "👺 ASURA MD OFFICIAL",
-                body: "Click to join our community! ✨",
-                mediaType: 1,
-                sourceUrl: groupLink,
-                showAdAttribution: true,
-                containsAutoReply: true
+        await sock.sendMessage(chat, { 
+            text: adMsg,
+            contextInfo: {
+                externalAdReply: {
+                    title: "👺 ASURA MD OFFICIAL",
+                    body: "Click to join our community! ✨",
+                    mediaType: 1,
+                    sourceUrl: groupLink,
+                    showAdAttribution: true,
+                    containsAutoReply: true
+                }
             }
-        }
-    });
-}
-        
+        });
+
     } catch (e) {
         console.error("Alive Error:", e);
     }
-}; 
-
+};

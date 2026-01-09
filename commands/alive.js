@@ -3,6 +3,7 @@ import fs from 'fs';
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const imagePath = './media/thumb.jpg'; 
+    const songPath = './media/song.opus'; 
 
     const aliveMsg = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
@@ -14,16 +15,18 @@ export default async (sock, msg, args) => {
 *Hello! I'm Asura MD, your fastest Assistant - alive and sparkling now! ✨*
 
 ╔━━━━━━━━━━━━━❥❥❥
-┃ *⊙👀status:- online 🤩*
-┃ *⊙📳mode:-  public ✅*
+┃ *⊙🩸ʜᴇᴀʟᴛʜ:- 100% (ᴇxᴄᴇʟʟᴇɴᴛ)*
+┃ *⊙⚔️ᴍᴏᴅᴇ:- ᴘᴜʙʟɪᴄ ᴇᴅɪᴛɪᴏɴ*
+┃ *⊙🧿ᴘʀᴇꜰɪx:- [ . ]*
 ╠━━━━━━━━━━━━━❥❥❥
-┃ *⊙🫀health:-  💯%*
+┃ *⊙🔥ᴘᴏᴡᴇʀ:- sᴜᴘᴇʀ sᴏɴɪᴄ ⚡*
+┃ *⊙👺ᴅᴇᴠᴇʟᴏᴘᴇʀ:- ᴀʀᴜɴ.ᴄᴜᴍᴀʀ*
 ╚━━━━━⛥❖⛥━━━━❥❥❥
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
     try {
-        // 1. മെയിൻ അലൈവ് മെസ്സേജ്
+        // 1. Send photo
         if (fs.existsSync(imagePath)) {
             await sock.sendMessage(chat, { 
                 image: fs.readFileSync(imagePath), 
@@ -33,7 +36,16 @@ export default async (sock, msg, args) => {
             await sock.sendMessage(chat, { text: aliveMsg }, { quoted: msg });
         }
 
-        // 2. ഗ്രൂപ്പ് & ചാനൽ ലിങ്ക് പരസ്യം (എപ്പോഴും അയക്കുന്നു)
+        // 2.  (song.opus )
+        if (fs.existsSync(songPath)) {
+            await sock.sendMessage(chat, { 
+                audio: fs.readFileSync(songPath), 
+                mimetype: 'audio/mpeg', 
+                ptt: true 
+            }, { quoted: msg });
+        }
+
+        // 3. Ads)
         const groupLink = "https://chat.whatsapp.com/LC3HXrnNI8J0481tjPTbtp";
         const channelLink = "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24";
         

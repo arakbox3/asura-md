@@ -14,8 +14,8 @@ export default async (sock, msg, args) => {
 
         const frames = [
             "📶 Analyzing Server...",
-            "📡 Calculating Ping.....",
-            "⏳ Fetching Uptime.............",
+            "📡 Calculating Ping...",
+            "⏳ Fetching Uptime...",
             "👺 Asura MD Engine Ready!"
         ];
 

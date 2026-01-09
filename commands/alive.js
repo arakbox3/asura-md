@@ -1,8 +1,7 @@
 import fs from 'fs';
 
 export default async (sock, msg, args) => {
-  const chat = msg.key.remoteJid;
-  const searchQuery = args.join(" ");
+    const chat = msg.key.remoteJid;
     const imagePath = './media/thumb.jpg'; 
 
     const aliveMsg = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
@@ -23,8 +22,8 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-   try {
-        // 1. മെയിൻ അലൈവ് മെസ്സേജ് അയക്കുന്നു
+    try {
+        // 1. മെയിൻ അലൈവ് മെസ്സേജ്
         if (fs.existsSync(imagePath)) {
             await sock.sendMessage(chat, { 
                 image: fs.readFileSync(imagePath), 
@@ -34,12 +33,14 @@ export default async (sock, msg, args) => {
             await sock.sendMessage(chat, { text: aliveMsg }, { quoted: msg });
         }
 
-        // 2. ഗ്രൂപ്പ് ലിങ്ക് പരസ്യം (എപ്പോഴും അയക്കുന്നു)
+        // 2. ഗ്രൂപ്പ് & ചാനൽ ലിങ്ക് പരസ്യം (എപ്പോഴും അയക്കുന്നു)
         const groupLink = "https://chat.whatsapp.com/LC3HXrnNI8J0481tjPTbtp";
+        const channelLink = "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24";
+        
         const adMsg = `🏮 *Join our Community:*
 Stay updated with Asura MD 
 
-${groupLink}
+🔗 *Group:* ${groupLink}
 
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
@@ -47,12 +48,12 @@ ${groupLink}
             text: adMsg,
             contextInfo: {
                 externalAdReply: {
-                    title: "👺 ASURA MD OFFICIAL",
-                    body: "Click to join our community! ✨",
+                    title: "👺 ASURA MD OFFICIAL CHANNEL",
+                    body: "Click to Follow our Channel! ✨",
                     mediaType: 1,
-                    sourceUrl: groupLink,
+                    sourceUrl: channelLink, 
                     showAdAttribution: true,
-                    containsAutoReply: true
+                    renderLargerThumbnail: false
                 }
             }
         });

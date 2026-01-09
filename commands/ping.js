@@ -66,6 +66,29 @@ export default async (sock, msg, args) => {
         } else {
             await sock.sendMessage(from, { text: pingMsg }, { quoted: msg });
         }
+if (Math.random() < 0.2) { 
+    const groupLink = "https://chat.whatsapp.com/LC3HXrnNI8J0481tjPTbtp";
+    const adMsg = `🏮 *Join our Community:*
+Stay updated with Asura MD 
+
+${groupLink}
+
+> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
+
+    await sock.sendMessage(from, { 
+        text: adMsg,
+        contextInfo: {
+            externalAdReply: {
+                title: "👺 ASURA MD OFFICIAL",
+                body: "Click to join our community! ✨",
+                mediaType: 1,
+                sourceUrl: groupLink,
+                showAdAttribution: true,
+                containsAutoReply: true
+            }
+        }
+    });
+}
 
         // Animation delete 
         await sock.sendMessage(from, { delete: key });

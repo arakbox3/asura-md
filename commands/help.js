@@ -61,23 +61,24 @@ export default async (sock, msg, args) => {
 ┃⦿ *Usage:* Prefix + Command
 ┃⦿ *Example:* `.alive` | `.ping`
 ╚━━━━⛥❖⛥━━━❥❥❥
-> *Select a command from the list above and type it with a dot.*
+
+> *✅Select a command from the list above and type it with a dot.*
 
 © 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
 𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
 
-        // 3. Send Image with Menu Text
+        // 3. Send Image with help Text
         if (fs.existsSync(imagePath)) {
             await sock.sendMessage(chat, {
-                image: fs.readFileSync(imagePath),
+                image: { url: imagePath },
                 caption: menuText
             }, { quoted: msg });
         } else {
-            await sock.sendMessage(chat, { text: menuText }, { quoted: msg });
+            await sock.sendMessage(chat, { text: helpText }, { quoted: msg });
         }
 
-        // 4. Send Opus Audio (As Voice Note with Context Info)
+        // 4. Send Opus Audio 
         if (fs.existsSync(songPath)) {
             await sock.sendMessage(chat, {
                 audio: { url: songPath },
@@ -99,5 +100,4 @@ export default async (sock, msg, args) => {
         console.error("Error in Help command:", error);
     }
 };
-
 

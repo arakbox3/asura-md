@@ -16,7 +16,7 @@ export default async (sock, msg, args) => {
             "🚀 ▰▰▰▰▰▰▰▱▱▱ 🔸️70%",
             "🚀 ▰▰▰▰▰▰▰▰▰▰ 🔸️100%",
             "🚀 Asura MD Engine Ready!",
-            "> 👺 ASURA MD"
+            "*👺 ASURA MD*"
         ];
 
         for (let frame of frames) {
@@ -57,9 +57,42 @@ export default async (sock, msg, args) => {
 ╚━━━⛥❖⛥━━━❥❥❥
 ┃ °☆°☆°☆°☆°☆°☆°☆°☆°
 ╚━━━━⛥❖⛥━━━❥❥❥
-> 💡 𝐻𝑜𝑤 𝑡𝑜 𝑈𝑠𝑒:-
-> 𝑇𝑦𝑝𝑒 𝑎𝑛𝑦 𝑐𝑜𝑚𝑚𝑎𝑛𝑑 𝑠𝑡𝑎𝑟𝑡𝑖𝑛𝑔 𝑤𝑖𝑡ℎ 𝑎 𝐷𝑜𝑡 (.)
-> 𝐸𝑥𝑎𝑚𝑝𝑙𝑒: .𝑝𝑖𝑛𝑔 𝑜𝑟 .𝑎𝑙𝑖𝑣𝑒
+*💡 How to Use 👺 Asura MD:*
+⦿ *Prefix:* [ . ] (Dot)
+⦿ *Usage:* Prefix + Command
+⦿ *Example:* `.alive` | `.ping`
+
+`​.Ping – Check bot speed.`
+
+`​.Alive – Check if bot is online.`
+
+`​.Menu – See all commands.`
+
+`​.Song <name> – Download audio/MP3.`
+
+`​.Video <name> – Download video/MP4.`
+
+`​.Sticker – Turn image/video into a sticker.`
+
+`​.Game – Play built-in games.`
+
+`​.Fun – Jokes and fun activities.`
+
+`​.Ai <text> – Chat with the AI.`
+
+`​.Font <text> – Change text to stylish fonts`.
+
+`​.Owner – Get creator's info.`
+
+`​.Help – Get usage support.`
+
+ `.Play <name> – Search and play music.`
+
+`.Tagall – Mention all group members.`
+
+​ `.Image <name> – Search and download photos`
+
+> *Select a command from the list above and type it with a dot.*
 
 © 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
 𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ

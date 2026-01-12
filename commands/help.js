@@ -44,13 +44,13 @@ export default async (sock, msg, args) => {
 ┃ ⊙🎵 .Song <name>–save audio/MP3.
 ┃ ⊙🎬 .Video <name>–save video/MP4.
 ┃ ⊙🖼️ .Sticker–Turn image/video/gif into a sticker.
-┃ ⊙🎮 .Game–Play built-in games.
+┃ ⊙🎲 .Game–Play built-in games.
 ┃ ⊙🎭 .Fun–Jokes and fun activities.
 ┃ ⊙🤖 .Ai <text>–Chat with the AI.
 ┃ ⊙🆎️ .Font <text>–Change text to stylish fonts.
 ┃ ⊙👤 .Owner–Get creator's info.
 ┃ ⊙📓 .Help–Get usage support.
-┃ ⊙🎧 .Play <name> <name>–Search and play music.
+┃ ⊙🎰 .Play–built-in games.
 ┃ ⊙📢 .Tagall–Mention all group members.
 ┃ ⊙📷 .Image <name>–Search and save photos
 ╚━━━⛥❖⛥━━━❥❥❥

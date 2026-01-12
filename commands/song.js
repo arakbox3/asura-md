@@ -52,30 +52,13 @@ export default async (sock, msg, args) => {
 
     // --- API 1: YtApi ---
     try {
-        const res1 = await axios.get(`https://ytapi-0n47.onrender.com/download?format=mp3&url=${encodeURIComponent(videoUrl)}`);
-        audioUrl = res1.data.result.download;
+        audioUrl = `https://ytapi-0n47.onrender.com/download?format=mp3&url=${encodeURIComponent(video.url)}`;
+        
+        // checking
+        await axios.head(audioUrl); 
     } catch (e) {
-        console.log("API 1 Failed");
-    }
-
-    // --- API 2: Keith API ---
-    if (!audioUrl) {
-        try {
-            const res2 = await axios.get(`https://izumiiiiiiii.dpdns.org/downloader/youtube?url=${encodeURIComponent(youtubeUrl)}&format=mp3`);
-            audioUrl = res2.data.result.downloadUrl;
-        } catch (e) {
-            console.log("API 2 Failed");
-        }
-    }
-
-    // --- API 3: Okatsu API ---
-    if (!audioUrl) {
-        try {
-            const res3 = await axios.get(`https://okatsu-rolezapiiz.vercel.app/downloader/ytmp3?url=${encodeURIComponent(video.url)}`);
-            audioUrl = res3.data.dl || res3.data.result?.mp3;
-        } catch (e) {
-            console.log("API 3 Failed");
-        }
+        console.log("API 1 Failed", e.message);
+        audioUrl = null;
     }
 
     if (!audioUrl) throw new Error("All APIs failed");
@@ -85,6 +68,7 @@ export default async (sock, msg, args) => {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
       fileName: `${video.title}.mp3`,
+      timeout: 60000,
       contextInfo: {
         externalAdReply: {
           title: video.title,
@@ -127,3 +111,5 @@ export default async (sock, msg, args) => {
     await sock.sendMessage(chat, { text: "❌ All servers are busy. Please try again later!" });
   }
 };
+
+

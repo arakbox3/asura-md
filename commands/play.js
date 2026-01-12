@@ -1,74 +1,69 @@
-import yts from 'yt-search';
-import fs from 'fs';
+import fs from "fs";
 
 export default async (sock, msg, args) => {
-    const chat = msg.key.remoteJid;
-    const text = args.join(" ");
-    const thumbPath = './media/thumb.jpg';
+  const chat = msg.key.remoteJid;
+  const sender = msg.pushName || "User";
+  
+  // Path to your local image
+  const imagePath = "./media/thumb.jpg"; 
 
-    if (!text) {
-        const helpMsg = `*👺⃝⃘̉̉̉━━━━━━━━━━━◆◆◆*
+  // Design Header
+  const header = `*👺⃝⃘̉̉━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
-*⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
+*⊹* 🎰 *Asura MD Slot Machine*
 *✧* 「 \`👺Asura MD\` 」
-*╰─────────────────❂*
-╔━━━━━━━━━━━━━❥❥❥
-┃ *⊙ ᴘʟᴀʏ ᴍᴜsɪᴄ*
-┃ *⊙ ᴜsᴀɢᴇ: .play <song name>*
-╠━━━━━━━━━━━━━❥❥❥
-┃ *👑Creator:-* arun•°Cumar
-╚━━━━━━━⛥❖⛥━━━━━━❥❥❥
-> 📢 Join: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
+*╰───────────❂*`;
 
-        if (fs.existsSync(thumbPath)) {
-            return sock.sendMessage(chat, { image: fs.readFileSync(thumbPath), caption: helpMsg });
-        } else {
-            return sock.sendMessage(chat, { text: helpMsg });
-        }
-    }
+  // First message - The "Spinning" state
+  const loadingText = `${header}
+╭•°•❲ *Spinning...* ❳•°•
+ ⊙👤 *PLAYER:* ${sender}
+ ⊙🎰 *STATUS:* [ 🔄 | 🔄 | 🔄 ]
+*🎮*
+╰╌╌╌╌╌╌╌╌╌╌࿐
+> 🎰 Betting on your luck...`;
 
-    try {
-        await sock.sendMessage(chat, { text: `🔎 Searching for *${text}*...` });
+  // Send initial image with caption
+  const sentMsg = await sock.sendMessage(chat, { 
+    image: fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : { url: 'https://placehold.co/600x400?text=No+Image' },
+    caption: loadingText 
+  });
 
-        // Search YouTube
-        const search = await yts(text);
-        const video = search.videos[0];
+  // Game Logic
+  const items = ["🍎", "💎", "🎰", "👺", "🔥", "⭐"];
+  const c1 = items[Math.floor(Math.random() * items.length)];
+  const c2 = items[Math.floor(Math.random() * items.length)];
+  const c3 = items[Math.floor(Math.random() * items.length)];
 
-        if (!video) return sock.sendMessage(chat, { text: "❌ No results found!" });
+  let resultMessage = "";
+  if (c1 === c2 && c2 === c3) {
+    resultMessage = "🎊 JACKPOT! YOU WON! 🎊";
+  } else if (c1 === c2 || c1 === c3 || c2 === c3) {
+    resultMessage = "✨ BIG WIN! ✨";
+  } else {
+    resultMessage = "💀 YOU LOST! TRY AGAIN.";
+  }
 
-        const playMsg = `*👺⃝⃘̉̉̉━━━━━━━━━━━◆◆◆*
-*┊ ┊ ┊ ┊ ┊*
-*┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
-*┊ ☪︎⋆*
-*⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
-*✧* 「 \`👺Asura MD\` 」
-*╰─────────────────❂*
-╔━━━━━━━━━━━━━❥❥❥
-┃ *⊙ Title:* ${video.title}
-┃ *⊙ Duration:* ${video.timestamp}
-┃ *⊙ Views:* ${video.views}
-┃ *⊙ Uploaded:* ${video.ago}
-╠━━━━━━━━━━━━━❥❥❥
-┃ *📥 Downloading audio...*
-╚━━━━━━━⛥❖⛥━━━━━━❥❥❥`;
+  // Final Design after spin
+  const finalText = `${header}
+╭•°•❲ *Spin Result* ❳•°•
+ ⊙👤 *PLAYER:* ${sender}
+ ⊙🎰 *SLOTS:* [ ${c1} | ${c2} | ${c3} ]
+*🎮*
+╰╌╌╌╌╌╌╌╌╌╌࿐
+╔━━━━━━━━━━━❥❥❥
+┃ *${resultMessage}*
+╚━━━━⛥❖⛥━━━━❥❥❥
+> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
+> *© ᴄʀᴇᴀᴛᴇ BY 👺Asura MD*`;
 
-        // Sending Video Thumbnail and Details
-        await sock.sendMessage(chat, { 
-            image: { url: video.thumbnail }, 
-            caption: playMsg 
-        }, { quoted: msg });
-
-        // ഇവിടെ ഡൗൺലോഡ് ലോജിക് ചേർക്കാം (yt-dlp അല്ലെങ്കിൽ API ഉപയോഗിച്ച്)
-        // തൽക്കാലം ലിങ്ക് അയക്കാൻ താഴെ നൽകുന്നു
-        await sock.sendMessage(chat, { 
-            text: `🎵 *Link:* ${video.url}\n\n> Use .song <link> to download audio.` 
-        }, { quoted: msg });
-
-    } catch (e) {
-        console.error(e);
-        sock.sendMessage(chat, { text: "❌ Something went wrong!" });
-    }
+  // Delay for 2 seconds then EDIT the message
+  setTimeout(async () => {
+    await sock.sendMessage(chat, {
+      text: finalText,
+      edit: sentMsg.key
+    });
+  }, 2000);
 };
-

@@ -12,6 +12,7 @@
     "@adiwajshing/keyed-db": "latest",
     "pino": "latest",
     "yt-search": "latest",
+    "yt-dlp-exec": "latest",
     "axios": "latest",
     "fs-extra": "latest",
     "express": "latest",

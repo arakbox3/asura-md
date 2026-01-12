@@ -41,15 +41,33 @@ export default async (sock, msg, args) => {
             image: { url: video.thumbnail }, 
             caption: captionText 
         }, { quoted: msg });
-
-        let downloadUrl = null;
-
-        // api
-        const response = await axios.get(`https://api.vkrhost.com/api/y2mate?url=${encodeURIComponent(video.url)}`);
         
-        let downloadUrl = response.data.links.mp4['auto'].url; 
+    let videoUrl = null;
 
-        if (!downloadUrl) throw new Error("Link not found");
+    // --- API ലെയറുകൾ (MP4) ---
+    const videoApis = [
+        async () => { // API 1: Cobalt
+            const res = await axios.post('https://api.cobalt.tools/api/json', { url: video.url, videoQuality: '720' }, { headers: { 'Accept': 'application/json' } });
+            return res.data.url;
+        },
+        async () => { // API 2: Siputzx
+            const res = await axios.get(`https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(video.url)}`);
+            return res.data.data.dl;
+        },
+        async () => { // API 3: Zenkey
+            const res = await axios.get(`https://api.zenkey.my.id/api/download/ytmp4?url=${encodeURIComponent(video.url)}&apikey=zenkey`);
+            return res.data.result.downloadUrl;
+        }
+    ];
+
+    for (const getVUrl of videoApis) {
+        try {
+            videoUrl = await getVUrl();
+            if (videoUrl) break;
+        } catch (e) { console.log("Video API Layer Failed, switching..."); }
+    }
+
+    if (!videoUrl) throw new Error("All Video APIs failed");
       
         await sock.sendMessage(chat, {
             video: { url: downloadUrl },

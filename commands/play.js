@@ -32,7 +32,6 @@ export default async (sock, msg, args) => {
 ╭•°•❲ *Game Started!* ❳•°•
  ⊙👤 *PLAYER:* ${sender}
  ⊙🎮 *QUEST:* Solve the Emoji Puzzle!
-*◀︎ •၊၊||၊||||။‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌࿐
 
 *CAN YOU SOLVE THIS?*

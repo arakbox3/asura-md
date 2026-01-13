@@ -1,99 +1,69 @@
-import axios from 'axios';
-import yts from 'yt-search';
+import yts from "yt-search";
+import { exec } from "child_process";
 
 export default async (sock, msg, args) => {
-    const chatId = msg.key.remoteJid;
-    const searchQuery = args.join(" ");
+  const chat = msg.key.remoteJid;
+  const searchText = args.join(" ");
 
-    if (!searchQuery) {
-        return sock.sendMessage(chatId, { text: '❌ Which song do you want to play?' }, { quoted: msg });
+  if (!searchText) {
+    return sock.sendMessage(chat, { text: "Usage: .song <name or link>" });
+  }
+
+  try {
+    // 1. സെർച്ച് ചെയ്യുന്നു
+    const search = await yts(searchText);
+    const video = search.videos[0];
+
+    if (!video) {
+      return sock.sendMessage(chat, { text: "Song Not Found 😢" });
     }
 
-    try {
-        // 1. YouTube Search
-        const { videos } = await yts(searchQuery);
-        if (!videos || videos.length === 0) {
-            return sock.sendMessage(chatId, { text: '❌ Song not found!' }, { quoted: msg });
-        }
+    const videoUrl = video.url;
+    const title = video.title;
+    const channel = video.author.name;
+    const views = video.views;
+    const date = video.ago;
 
-        const video = videos[0];
-        const videoUrl = video.url;
-
-        // 2. 5 Powerful API List
-        const apiList = [
-            `https://api.siputzx.my.id/api/d/ytmp3?url=${videoUrl}`,
-            `https://api.zenkey.my.id/api/download/ytmp3?url=${videoUrl}`,
-            `https://widipe.com/download/ytdl?url=${videoUrl}`,
-            `https://api.agatz.xyz/api/ytmp3?url=${videoUrl}`,
-            `https://api.boxi.my.id/api/youtube/mp3?url=${videoUrl}`
-        ];
-
-        let finalAudioUrl = null;
-        let success = false;
-
-        // 3. Fallback Logic: ഒന്നൊന്നായി ചെക്ക് ചെയ്യുന്നു
-        for (const api of apiList) {
-            try {
-                const res = await axios.get(api);
-                // API റെസ്പോൺസ് അനുസരിച്ച് ലിങ്ക് എടുക്കുന്നു
-                finalAudioUrl = res.data?.data?.dl || res.data?.result?.url || res.data?.result?.download || res.data?.url || res.data?.mp3;
-                
-                if (finalAudioUrl) {
-                    success = true;
-                    break; 
-                }
-            } catch (e) {
-                continue; // എറർ വന്നാൽ അടുത്ത API നോക്കും
-            }
-        }
-
-        if (!success || !finalAudioUrl) {
-            throw new Error('All music APIs are down.');
-        }
-
-        // 4. Asura MD Design
-        const infoText = `*👺⃝⃘̉̉━━━━━━━━◆◆◆*
+    const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
-*⊹*  *🎵 Song Download*
+*⊹* 🪔 *Song Download*
 *✧* 「 \`👺Asura MD\` 」
-*╰───────────❂*
-╭•°•❲ *Streaming...* ❳•°•
- ⊙🎬 *TITLE:* ${video.title}
- ⊙🎙️ *ARTIST:* ${video.author.name}
- ⊙⏳ *DURATION:* ${video.timestamp}
-*◀︎ •၊၊||၊||||။‌၊||••*
-╰╌╌╌╌╌╌╌╌╌╌࿐
+*╰─────────────────❂*
+╭•°•❲ *Downloading...* ❳•°•
+ ⊙🎵 *TITLE:* ${title}
+ ⊙📺 *CHANNEL:* ${channel}
+ ⊙👀 *VIEWS:* ${views}
+ ⊙⏳ *AGO:* ${date}
+*◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
+╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
-> *© ᴄʀᴇᴀᴛᴇ BY 👺Asura MD*`;
+> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-        // 5. Send Thumbnail first
-        await sock.sendMessage(chatId, { 
-            image: { url: video.thumbnail }, 
-            caption: infoText 
-        }, { quoted: msg });
+    // 2. തംബ്‌നെയിൽ അയക്കുന്നു
+    await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
 
-        // 6. Send Audio Directly (No Local Download)
-        await sock.sendMessage(chatId, {
-            audio: { url: finalAudioUrl },
-            mimetype: 'audio/mpeg',
-            fileName: `${video.title}.mp3`,
-            contextInfo: {
-                externalAdReply: {
-                    title: video.title,
-                    body: 'Asura MD Music Player 👺',
-                    thumbnailUrl: video.thumbnail,
-                    mediaType: 1,
-                    showAdAttribution: true,
-                    renderLargerThumbnail: true,
-                    sourceUrl: videoUrl
-                }
-            }
-        }, { quoted: msg });
+    // 3. ഓഡിയോ ലിങ്ക് മാത്രം എടുക്കുന്നു
+    // -f "bestaudio" ഉപയോഗിച്ച് ഓഡിയോ സ്ട്രീം ലിങ്ക് മാത്രം എടുക്കുന്നു
+    exec(`yt-dlp -g -f "bestaudio" "${videoUrl}"`, async (error, stdout) => {
+      if (error || !stdout) {
+        console.error("Audio Link Error:", error);
+        return sock.sendMessage(chat, { text: "Error fetching audio link! ❌" });
+      }
 
-    } catch (error) {
-        console.error('[MUSIC ERROR]:', error);
-        await sock.sendMessage(chatId, { text: '❌ Failed to stream audio. Please try again later.' }, { quoted: msg });
-    }
+      const directUrl = stdout.trim();
+
+      // 4. ഓഡിയോ നേരിട്ട് അയക്കുന്നു
+      await sock.sendMessage(chat, {
+        audio: { url: directUrl },
+        mimetype: 'audio/mp4', // അല്ലെങ്കിൽ 'audio/mpeg'
+        ptt: false // Voice note ആയി അയക്കണമെങ്കിൽ true ആക്കുക
+      }, { quoted: msg });
+    });
+
+  } catch (err) {
+    console.error("Main Error:", err);
+    sock.sendMessage(chat, { text: "Something went wrong! 😢" });
+  }
 };

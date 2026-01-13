@@ -52,6 +52,7 @@ export default async (sock, msg, args) => {
 ┃ ⊙👤   .Owner
 ┃ ⊙📓   .Help
 ┃ ⊙🤯   .Play
+┃ ⊙👁️   .view 
 ┃ ⊙📢   .Tagall
 ┃ ⊙📷   .Image <name>
 ╚━━━⛥❖⛥━━━❥❥❥

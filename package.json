@@ -21,6 +21,7 @@
     "g-i-s": "latest",
     "@distube/ytdl-core": "latest",   
     "wa-sticker-formatter": "latest",
-    "qrcode-terminal": "latest"
+    "qrcode-terminal": "latest",
+    "yt-search": "latest"
   }
 }

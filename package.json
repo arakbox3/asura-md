@@ -22,6 +22,8 @@
     "@distube/ytdl-core": "latest",   
     "wa-sticker-formatter": "latest",
     "qrcode-terminal": "latest",
-    "yt-search": "latest"
+    "yt-search": "latest",
+    "@tensorflow/tfjs-node": "latest", 
+    "nsfwjs": "latest"
   }
 }

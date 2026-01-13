@@ -5,21 +5,25 @@ export default async (sock, msg, args) => {
   const searchQuery = args.join(" ");
 
   if (!searchQuery) {
-    return sock.sendMessage(chat, { text: "❌ Usage: *.video* [status name]" });
+    return sock.sendMessage(chat, { text: "❌ Usage: *.status* [name]" });
   }
 
   try {
-   
-    const res = await axios.get(`https://api.giftedtech.my.id/api/search/pinterestvideo?query=${encodeURIComponent(searchQuery + " status video")}`);
-    
-    if (!res.data || !res.data.results || res.data.results.length === 0) {
-      return sock.sendMessage(chat, { text: "❌ Status Video Not Found!" });
+    // 1. Pinterest-ൽ നിന്ന് നേരിട്ട് വീഡിയോ ഡാറ്റ വലിച്ച് എടുക്കുന്നു
+    // ഇതിന് പ്രത്യേകം API Key ആവശ്യമില്ല, ഇത് ബ്ലോക്ക് ആകാൻ സാധ്യത കുറവാണ്.
+    const searchRes = await axios.get(`https://www.pinterest.com/resource/BaseSearchResource/get/?data=%7B%22options%22%3A%7B%22query%22%3A%22${encodeURIComponent(searchQuery + " status video")}%22%2C%22scope%22%3A%22pins%22%2C%22page_size%22%3A1%7D%7D`);
+
+    const pins = searchRes.data.resource_response.data.results;
+    if (!pins || pins.length === 0) return sock.sendMessage(chat, { text: "❌ No Video Found!" });
+
+    // വീഡിയോ ഫയൽ നേരിട്ട് കണ്ടെത്തുന്നു
+    const videoUrl = pins[0].videos?.video_list?.V_720P?.url || pins[0].videos?.video_list?.V_HLSV3?.url;
+
+    if (!videoUrl) {
+      return sock.sendMessage(chat, { text: "❌ Video file not available for this search!" });
     }
 
-    const videoUrl = res.data.results[0].url;
-    const title = res.data.results[0].title || searchQuery;
-
-  
+    // നിങ്ങളുടെ അതേ ഡിസൈൻ ക്യാപ്ഷൻ
     const infoText = `*👺⃝⃘̉̉━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -27,24 +31,23 @@ export default async (sock, msg, args) => {
 *⊹* 🎬 *Status Download*
 *✧* 「 \`👺Asura MD\` 」
 *╰───────────❂*
-╭•°•❲ *Streaming...* ❳•°•
- ⊙🎬 *TITLE:* ${title}
- ⊙⏳ *TYPE:* Status Video
+╭•°•❲ *Direct Sending...* ❳•°•
+ ⊙🎬 *QUERY:* ${searchQuery}
+ ⊙📺 *SOURCE:* 😜
+ ⊙⏳ *STATUS:* 4k quality
 *◀︎ •၊၊||၊||||။‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌࿐
-> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇ BY 👺Asura MD*`;
 
-    // ✅ (No Download - Direct Stream)
+    // ✅ ഫയൽ നേരിട്ട് അയക്കുന്നു
     await sock.sendMessage(chat, {
       video: { url: videoUrl },
       caption: infoText,
-      mimetype: "video/mp4",
-      fileName: `status.mp4`
+      mimetype: "video/mp4"
     }, { quoted: msg });
 
   } catch (err) {
     console.error(err);
-    await sock.sendMessage(chat, { text: "❌ Video servers are busy. Please try again later!" });
+    await sock.sendMessage(chat, { text: "❌ Connection error! Try again later." });
   }
 };

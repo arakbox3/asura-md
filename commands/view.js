@@ -4,7 +4,8 @@ import fs from 'fs';
 export default async (sock, msg) => {
     const chat = msg.key.remoteJid;
     const thumbPath = "./media/thumb.jpg";
-    const caption = "> 👺ASURA MD";
+    const caption = "> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
+        > 👺ASURA MD";
 
     // 1. റിപ്ലൈ മെസ്സേജ് പരിശോധിക്കുന്നു
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;

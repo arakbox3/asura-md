@@ -1,62 +1,60 @@
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import fs from 'fs';
-import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 
-export default async (sock, msg, args) => {
+export default async (sock, msg) => {
     const chat = msg.key.remoteJid;
     const thumbPath = "./media/thumb.jpg";
+    const caption = "> 👺ASURA MD";
 
-    // റിപ്ലൈ ചെയ്ത മെസ്സേജ് വൺസ് വ്യൂ ആണോ എന്ന് പരിശോധിക്കുന്നു
+    // 1. റിപ്ലൈ മെസ്സേജ് പരിശോധിക്കുന്നു
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const viewOnceMsg = quoted?.viewOnceMessageV2?.message || quoted?.viewOnceMessage?.message;
+    if (!quoted) return sock.sendMessage(chat, { text: "❌ Please reply to a *View* message!" }, { quoted: msg });
 
-    if (!viewOnceMsg) {
-        return sock.sendMessage(chat, { text: "❌ Please reply to a *View Once* message!" }, { quoted: msg });
-    }
+    // 2. വ്യൂ വൺസ് മെസ്സേജ് ടൈപ്പ് കണ്ടെത്തുന്നു (V1 & V2 സപ്പോർട്ട്)
+    const viewOnce = quoted.viewOnceMessageV2 || quoted.viewOnceMessage;
+    if (!viewOnce) return sock.sendMessage(chat, { text: "❌ This is not a *View Once* message!" }, { quoted: msg });
 
     try {
-        const type = Object.keys(viewOnceMsg)[0]; // imageMessage, videoMessage, or audioMessage
-        const media = viewOnceMsg[type];
+        // 3. മീഡിയ ഡൗൺലോഡ് ചെയ്യുന്നു (ബഫർ ആയി മാത്രം - No Saving)
+        const buffer = await downloadMediaMessage(
+            { message: viewOnce.message },
+            'buffer',
+            {},
+            { 
+                logger: console,
+                reuploadRequest: sock.updateMediaMessage 
+            }
+        );
 
-        // മീഡിയ ഡൗൺലോഡ് ചെയ്യുന്നു
-        const stream = await downloadContentFromMessage(media, type.replace('Message', ''));
-        let buffer = Buffer.from([]);
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
+        const type = Object.keys(viewOnce.message)[0];
+        const thumb = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null;
 
-        const caption = "> 👺ASURA MD";
-        const commonOptions = { quoted: msg };
+        // 4. മെസ്സേജ് ടൈപ്പ് അനുസരിച്ച് തിരികെ അയക്കുന്നു
+        if (type === 'imageMessage') {
+            await sock.sendMessage(chat, { 
+                image: buffer, 
+                caption: caption,
+                jpegThumbnail: thumb 
+            }, { quoted: msg });
 
-        // വോയിസ് മെസ്സേജ് ആണെങ്കിൽ
-        if (type === 'audioMessage') {
+        } else if (type === 'videoMessage') {
+            await sock.sendMessage(chat, { 
+                video: buffer, 
+                caption: caption, 
+                mimetype: 'video/mp4',
+                jpegThumbnail: thumb 
+            }, { quoted: msg });
+
+        } else if (type === 'audioMessage') {
             await sock.sendMessage(chat, { 
                 audio: buffer, 
                 mimetype: 'audio/ogg; codecs=opus', 
                 ptt: true 
-            }, commonOptions);
-
-        } 
-        // ഇമേജ് ആണെങ്കിൽ
-        else if (type === 'imageMessage') {
-            await sock.sendMessage(chat, { 
-                image: buffer, 
-                caption: caption,
-                jpegThumbnail: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null
-            }, commonOptions);
-
-        } 
-        // വീഡിയോ ആണെങ്കിൽ
-        else if (type === 'videoMessage') {
-            await sock.sendMessage(chat, { 
-                video: buffer, 
-                caption: caption,
-                mimetype: 'video/mp4',
-                jpegThumbnail: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null
-            }, commonOptions);
+            }, { quoted: msg });
         }
 
     } catch (e) {
-        console.error(e);
-        await sock.sendMessage(chat, { text: "❌ Failed to retrieve the media. It might have expired." }, { quoted: msg });
+        console.error("VV Error:", e);
+        await sock.sendMessage(chat, { text: "❌ Failed! Media might be too old or expired." }, { quoted: msg });
     }
 };

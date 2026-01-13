@@ -44,6 +44,7 @@ export default async (sock, msg, args) => {
 ┃ ⊙📜   .Menu
 ┃ ⊙🎵   .Song <name>
 ┃ ⊙🎬   .Video <name>
+┃ ⊙🔊   .Audio <name> 
 ┃ ⊙🖼️   .Sticker
 ┃ ⊙🎲   .Game
 ┃ ⊙🎭   .Fun

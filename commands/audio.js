@@ -42,41 +42,52 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // 2. തംബ്‌നെയിൽ അയക്കുന്നു (Local image path: ./media/thumb.jpg)
+    //  (Local image path: ./media/thumb.jpg)
     const thumbPath = "./media/thumb.jpg";
     const imageContent = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: video.thumbnail };
-
     await sock.sendMessage(chat, { image: imageContent, caption: captionText });
 
-    // 3. API വഴി ഡൗൺലോഡ് ലിങ്ക് എടുക്കുന്നു
+    // No download 
     let downloadUrl = null;
-
     try {
-      // First try Yupra API
       const resYupra = await axios.get(`https://api.yupra.my.id/api/downloader/ytmp3?url=${encodeURIComponent(videoUrl)}`);
-      if (resYupra.data?.success && resYupra.data?.data?.download_url) {
+      if (resYupra.data?.success) {
         downloadUrl = resYupra.data.data.download_url;
       } else {
-        // Fallback to Okatsu API
         const resOkatsu = await axios.get(`https://okatsu-rolezapiiz.vercel.app/downloader/ytmp3?url=${encodeURIComponent(videoUrl)}`);
-        if (resOkatsu.data?.dl) {
-          downloadUrl = resOkatsu.data.dl;
-        }
+        downloadUrl = resOkatsu.data?.dl;
       }
-    } catch (apiErr) {
-      console.error("API Error:", apiErr);
-    }
+    } catch (e) { console.error("API Link Error"); }
 
-    // 4. ഓഡിയോ നേരിട്ട് അയക്കുന്നു
-    if (downloadUrl) {
+    if (!downloadUrl) return sock.sendMessage(chat, { text: " ❌" });
+
+    // temporary download(Buffer Method)
+    const fileName = `./media/song_${Date.now()}.mp3`;
+    const response = await axios({
+      method: 'get',
+      url: downloadUrl,
+      responseType: 'stream'
+    });
+
+    const writer = fs.createWriteStream(fileName);
+    response.data.pipe(writer);
+
+    writer.on('finish', async () => {
+ 
       await sock.sendMessage(chat, {
-        audio: { url: downloadUrl },
+        audio: fs.readFileSync(fileName),
         mimetype: 'audio/mpeg',
         ptt: false 
       }, { quoted: msg });
-    } else {
-      sock.sendMessage(chat, { text: "Error: Could not fetch download link. ❌" });
-    }
+
+      // 5. അയച്ച ശേഷം ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
+      fs.unlinkSync(fileName);
+    });
+
+    writer.on('error', (err) => {
+      console.error("Download Error:", err);
+      sock.sendMessage(chat, { text: " 😢" });
+    });
 
   } catch (err) {
     console.error("Main Error:", err);

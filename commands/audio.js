@@ -1,30 +1,32 @@
 import yts from "yt-search";
 import axios from "axios";
+import { exec } from "child_process";
 import fs from "fs";
+import { promisify } from "util";
+
+const execPromise = promisify(exec);
 
 export default async (sock, msg, args) => {
   const chat = msg.key.remoteJid;
   const searchText = args.join(" ");
 
   if (!searchText) {
-    return sock.sendMessage(chat, { text: "Usage: .audio <name>" });
+    return sock.sendMessage(chat, { text: "Usage: .Audio name or link" });
   }
 
   try {
-    // 1. യൂട്യൂബ് സെർച്ച്
+    // 1. വീഡിയോ സെർച്ച് ചെയ്യുന്നു
     const search = await yts(searchText);
     const video = search.videos[0];
 
     if (!video) {
-      return sock.sendMessage(chat, { text: "Audio Not Found 😢" });
+      return sock.sendMessage(chat, { text: "audio Not Found 😢" });
     }
 
     const videoUrl = video.url;
     const title = video.title;
-    const channel = video.author.name;
-    const views = video.views;
-    const date = video.ago;
 
+    // Design Caption
     const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
@@ -34,50 +36,51 @@ export default async (sock, msg, args) => {
 *╰─────────────────❂*
 ╭•°•❲ *Downloading...* ❳•°•
  ⊙🎵 *TITLE:* ${title}
- ⊙📺 *CHANNEL:* ${channel}
- ⊙👀 *VIEWS:* ${views}
- ⊙⏳ *AGO:* ${date}
+ ⊙📺 *CHANNEL:* ${video.author.name}
+ ⊙👀 *VIEWS:* ${video.views}
+ ⊙⏳ *AGO:* ${video.ago}
 *◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // . തംബ്‌നെയിൽ അയക്കുന്നു (Local image path: ./media/thumb.jpg)
-    const thumbPath = "./media/thumb.jpg";
-    const imageContent = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: video.thumbnail };
-    await sock.sendMessage(chat, { image: imageContent, caption: captionText });
+    // തംബ്‌നെയിൽ അയക്കുന്നു
+    const thumbRes = await axios.get(video.thumbnail, { responseType: 'arraybuffer' });
+    const thumbBuffer = Buffer.from(thumbRes.data);
+    
+    await sock.sendMessage(chat, { image: thumbBuffer, caption: captionText });
 
-    // --- STREAMING LOGIC (NO SAVE) ---
-    // yt-dlp ഉപയോഗിച്ച് ഡാറ്റ നേരിട്ട് സ്റ്റാൻഡേർഡ് ഔട്ട്‌പുട്ടിലേക്ക് (stdout) എടുക്കുന്നു
-    const ytProcess = spawn("yt-dlp", [
-      "-f", "bestaudio",
-      "--extract-audio",
-      "--audio-format", "mp3",
-      "--audio-quality", "128K",
-      "-o", "-", // ഡാറ്റ ഫയലിലേക്ക് മാറ്റാതെ നേരിട്ട് തരുന്നു
-      video.url
-    ]);
+    // 2. താൽക്കാലിക ഫയൽ പാത്ത്
+    const fileName = `./media/asura_${Date.now()}.mp3`;
 
-    let chunks = [];
-    ytProcess.stdout.on("data", (chunk) => chunks.push(chunk));
+    // 3. yt-dlp ഉപയോഗിച്ച് ഓഡിയോ എടുക്കുന്നു (Permanent Solution)
+    // ഇത് MP3 ആയി തന്നെ മാറ്റുന്നതിനാൽ Play Error വരില്ല
+    await execPromise(`yt-dlp -f "bestaudio" --extract-audio --audio-format mp3 --audio-quality 128K "${videoUrl}" -o "${fileName}"`);
 
-    ytProcess.on("close", async () => {
-      const audioBuffer = Buffer.concat(chunks);
-      
+    if (fs.existsSync(fileName)) {
+      // 4. ഓഡിയോ അയക്കുന്നു (With AdReply Design)
       await sock.sendMessage(chat, {
-        audio: audioBuffer,
+        audio: fs.readFileSync(fileName),
         mimetype: 'audio/mpeg',
-        ptt: false 
+        fileName: `${title}.mp3`,
+        contextInfo: {
+          externalAdReply: {
+            title: title,
+            body: 'Asura MD 👺',
+            thumbnail: thumbBuffer,
+            mediaType: 1,
+            sourceUrl: videoUrl,
+            renderLargerThumbnail: true,
+          }
+        }
       }, { quoted: msg });
-    });
 
-    ytProcess.on("error", (err) => {
-      console.error("YT-DLP Error:", err);
-      sock.sendMessage(chat, { text: "Streaming failed! ❌" });
-    });
+      // 5. അയച്ച ശേഷം ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു
+      fs.unlinkSync(fileName);
+    }
 
   } catch (err) {
-    console.error("Main Error:", err);
-    sock.sendMessage(chat, { text: "Something went wrong! 😢" });
+    console.error("Error:", err);
+    sock.sendMessage(chat, { text: "Something went wrong or Server Busy! 😢" });
   }
 };

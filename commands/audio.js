@@ -71,7 +71,7 @@ export default async (sock, msg, args) => {
     if (downloadUrl) {
       await sock.sendMessage(chat, {
         audio: { url: downloadUrl },
-        mimetype: 'audio/mpeg,
+        mimetype: 'audio/mpeg',
         ptt: false 
       }, { quoted: msg });
     } else {

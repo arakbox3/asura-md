@@ -1,32 +1,56 @@
 import yts from "yt-search";
-import { exec } from "child_process";
-import fs from "fs";
+import axios from "axios";
 
-export default async (sock, msg, args) => {
-  const chat = msg.key.remoteJid;
-  const searchText = args.join(" ");
-
-  if (!searchText) {
-    return sock.sendMessage(chat, { text: "Usage: .video <name or link>" });
-  }
-
-  try {
-    const search = await yts(searchText);
-    const video = search.videos[0];
-
-    if (!video) {
-      return sock.sendMessage(chat, { text: "Video Not Found 😢" });
+// API ഫങ്ക്ഷനുകൾ
+async function getDownloadUrl(youtubeUrl) {
+    try {
+        // 1. ആദ്യത്തെ API (Yupra) പരീക്ഷിക്കുന്നു
+        const yupraUrl = `https://api.yupra.my.id/api/downloader/ytmp4?url=${encodeURIComponent(youtubeUrl)}`;
+        const res = await axios.get(yupraUrl);
+        if (res?.data?.success && res?.data?.data?.download_url) {
+            return res.data.data.download_url;
+        }
+    } catch (e) {
+        console.log("Yupra API failed, trying Okatsu...");
     }
 
-    const videoUrl = video.url;
-    const title = video.title;
+    try {
+        // 2. രണ്ടാമത്തെ API (Okatsu) പരീക്ഷിക്കുന്നു
+        const okatsuUrl = `https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(youtubeUrl)}`;
+        const res = await axios.get(okatsuUrl);
+        if (res?.data?.result?.mp4) {
+            return res.data.result.mp4;
+        }
+    } catch (e) {
+        console.error("Both APIs failed");
+    }
+    return null;
+}
 
-    // ലോക്കൽ തംബ്‌നെയിൽ പാത്ത്
-    const thumbPath = "./media/thumb.jpg";
-    const imageContent = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: video.thumbnail };
+export default async (sock, msg, args) => {
+    const chat = msg.key.remoteJid;
+    const searchText = args.join(" ");
 
-    // ഡിസൈൻ ക്യാപ്ഷൻ
-    const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
+    if (!searchText) {
+        return sock.sendMessage(chat, { text: "Usage: .video <name or link>" });
+    }
+
+    try {
+        // 1. വീഡിയോ സെർച്ച് ചെയ്യുന്നു
+        const search = await yts(searchText);
+        const video = search.videos[0];
+
+        if (!video) {
+            return sock.sendMessage(chat, { text: "Video Not Found 😢" });
+        }
+
+        const videoUrl = video.url;
+        const title = video.title;
+        const channel = video.author.name;
+        const views = video.views;
+        const date = video.ago;
+
+        const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
@@ -35,37 +59,33 @@ export default async (sock, msg, args) => {
 *╰─────────────────❂*
 ╭•°•❲ *Downloading...* ❳•°•
  ⊙🎬 *TITLE:* ${title}
+ ⊙📺 *CHANNEL:* ${channel}
+ ⊙👀 *VIEWS:* ${views}
+ ⊙⏳ *AGO:* ${date}
 *◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
-╰╌╌╌╌╌╌╌╌╌╌╌╌࿐`;
+╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
+> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
+> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // 1. തംബ്‌നെയിൽ അയക്കുന്നു
-    await sock.sendMessage(chat, { image: imageContent, caption: captionText });
+        // 2. തംബ്‌നെയിൽ അയക്കുന്നു (അതേ ഡിസൈനിൽ)
+        await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
 
-    // 2. താൽക്കാലികമായി ഫയൽ സേവ് ചെയ്യാൻ ഒരു പേര് നൽകുന്നു
-    const fileName = `./media/temp_${Date.now()}.mp4`;
+        // 3. API വഴി ഡയറക്ട് ഡൗൺലോഡ് ലിങ്ക് എടുക്കുന്നു
+        const directDownloadLink = await getDownloadUrl(videoUrl);
 
-    // 3. yt-dlp ഉപയോഗിച്ച് വീഡിയോ ഡൗൺലോഡ് ചെയ്യുന്നു (480p quality)
-    exec(`yt-dlp -f "best[ext=mp4][height<=480]" "${videoUrl}" -o "${fileName}"`, async (error) => {
-      if (error) {
-        console.error("Download Error:", error);
-        return sock.sendMessage(chat, { text: "Error ❌" });
-      }
+        if (!directDownloadLink) {
+            return sock.sendMessage(chat, { text: "Error: Unable to fetch download link from APIs! ❌" });
+        }
 
-      // 4. വീഡിയോ അയക്കുന്നു
-      if (fs.existsSync(fileName)) {
+        // 4. വീഡിയോ സ്ട്രീമിംഗ് ആയി നേരിട്ട് അയക്കുന്നു
         await sock.sendMessage(chat, {
-          video: fs.readFileSync(fileName),
-          mimetype: 'video/mp4',
-          caption: `*${title}*`
+            video: { url: directDownloadLink },
+            mimetype: 'video/mp4',
+            caption: `*${title}*`
         }, { quoted: msg });
 
-        // 5. അയച്ചതിന് ശേഷം ഫയൽ ഡിലീറ്റ് ചെയ്യുന്നു (Storage ലാഭിക്കാൻ)
-        fs.unlinkSync(fileName);
-      }
-    });
-
-  } catch (err) {
-    console.error("Main Error:", err);
-    sock.sendMessage(chat, { text: "😢" });
-  }
+    } catch (err) {
+        console.error("Main Error:", err);
+        sock.sendMessage(chat, { text: "Something went wrong! 😢" });
+    }
 };

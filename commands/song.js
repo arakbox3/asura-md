@@ -1,5 +1,5 @@
 import yts from "yt-search";
-import { exec } from "child_process";
+import axios from "axios";
 import fs from "fs";
 
 export default async (sock, msg, args) => {
@@ -7,7 +7,7 @@ export default async (sock, msg, args) => {
   const searchText = args.join(" ");
 
   if (!searchText) {
-    return sock.sendMessage(chat, { text: "Usage: .audio <song name>" });
+    return sock.sendMessage(chat, { text: "Usage: .song <song name>" });
   }
 
   try {
@@ -21,10 +21,9 @@ export default async (sock, msg, args) => {
 
     const videoUrl = video.url;
     const title = video.title;
-
-    // ലോക്കൽ തംബ്‌നെയിൽ പാത്ത് (./media/thumb.jpg)
-    const thumbPath = "./media/thumb.jpg";
-    const imageContent = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: video.thumbnail };
+    const channel = video.author.name;
+    const views = video.views;
+    const date = video.ago;
 
     const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
@@ -35,35 +34,49 @@ export default async (sock, msg, args) => {
 *╰─────────────────❂*
 ╭•°•❲ *Downloading...* ❳•°•
  ⊙🎵 *TITLE:* ${title}
+ ⊙📺 *CHANNEL:* ${channel}
+ ⊙👀 *VIEWS:* ${views}
+ ⊙⏳ *AGO:* ${date}
 *◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
-╰╌╌╌╌╌╌╌╌╌╌╌╌࿐`;
+╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
+> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
+> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    // 2. തംബ്‌നെയിൽ അയക്കുന്നു
+    // 2. തംബ്‌നെയിൽ അയക്കുന്നു (Local image path: ./media/thumb.jpg)
+    const thumbPath = "./media/thumb.jpg";
+    const imageContent = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: video.thumbnail };
+
     await sock.sendMessage(chat, { image: imageContent, caption: captionText });
 
-    // 3. താൽക്കാലിക ഫയൽ പാത്ത്
-    const fileName = `./media/audio_${Date.now()}.mp3`;
+    // 3. API വഴി ഡൗൺലോഡ് ലിങ്ക് എടുക്കുന്നു
+    let downloadUrl = null;
 
-    // 4. yt-dlp ഉപയോഗിച്ച് ഓഡിയോ ഡൗൺലോഡ് ചെയ്യുന്നു
-    // --extract-audio ഉപയോഗിച്ച് mp3 ആയി മാറ്റുന്നു
-    exec(`yt-dlp -f "bestaudio" --extract-audio --audio-format mp3 "${videoUrl}" -o "${fileName}"`, async (error) => {
-      if (error) {
-        console.error("Audio Download Error:", error);
-        return sock.sendMessage(chat, { text: "Error ❌" });
+    try {
+      // First try Yupra API
+      const resYupra = await axios.get(`https://api.yupra.my.id/api/downloader/ytmp3?url=${encodeURIComponent(videoUrl)}`);
+      if (resYupra.data?.success && resYupra.data?.data?.download_url) {
+        downloadUrl = resYupra.data.data.download_url;
+      } else {
+        // Fallback to Okatsu API
+        const resOkatsu = await axios.get(`https://okatsu-rolezapiiz.vercel.app/downloader/ytmp3?url=${encodeURIComponent(videoUrl)}`);
+        if (resOkatsu.data?.dl) {
+          downloadUrl = resOkatsu.data.dl;
+        }
       }
+    } catch (apiErr) {
+      console.error("API Error:", apiErr);
+    }
 
-      // 5. ഓഡിയോ അയക്കുന്നു
-      if (fs.existsSync(fileName)) {
-        await sock.sendMessage(chat, {
-          audio: fs.readFileSync(fileName),
-          mimetype: 'audio/mpeg',
-          ptt: false 
-        }, { quoted: msg });
-
-     
-        fs.unlinkSync(fileName);
-      }
-    });
+    // 4. ഓഡിയോ നേരിട്ട് അയക്കുന്നു
+    if (downloadUrl) {
+      await sock.sendMessage(chat, {
+        audio: { url: downloadUrl },
+        mimetype: 'audio/ogg,
+        ptt: false 
+      }, { quoted: msg });
+    } else {
+      sock.sendMessage(chat, { text: "Error: Could not fetch download link. ❌" });
+    }
 
   } catch (err) {
     console.error("Main Error:", err);

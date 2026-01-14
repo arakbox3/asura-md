@@ -7,7 +7,7 @@ export default async (sock, msg, args) => {
   const searchText = args.join(" ");
 
   if (!searchText) {
-    return sock.sendMessage(chat, { text: "Usage: .audio < name>" });
+    return sock.sendMessage(chat, { text: "Usage: .audio <song name>" });
   }
 
   try {
@@ -29,7 +29,7 @@ export default async (sock, msg, args) => {
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
-*⊹* 🪔 *Aduio Download*
+*⊹* 🪔 *Audio Download*
 *✧* 「 \`👺Asura MD\` 」
 *╰─────────────────❂*
 ╭•°•❲ *Downloading...* ❳•°•
@@ -42,13 +42,13 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-    //  (Local image path: ./media/thumb.jpg)
+    // തംബ്‌നെയിൽ ലോഡ് ചെയ്യുന്നു
     const thumbPath = "./media/thumb.jpg";
     const imageContent = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: video.thumbnail };
     
     await sock.sendMessage(chat, { 
       image: imageContent, 
-      caption: `*Downloading:* ${title}` 
+      caption: captionText 
     });
 
     // 2. API-ൽ നിന്ന് ലിങ്ക് എടുക്കുന്നു
@@ -61,18 +61,19 @@ export default async (sock, msg, args) => {
         const resOkatsu = await axios.get(`https://okatsu-rolezapiiz.vercel.app/downloader/ytmp3?url=${encodeURIComponent(videoUrl)}`);
         downloadUrl = resOkatsu.data?.dl;
       }
-    } catch (e) { console.error("API Link Fetching Failed"); }
+    } catch (e) { 
+      console.error("API Error:", e.message); 
+    }
 
-    if (!downloadUrl) return sock.sendMessage(chat, { text: " loading" });
+    if (!downloadUrl) return sock.sendMessage(chat, { text: "Could not fetch download link! ❌" });
 
-  
-    const response = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
+    // 3. BUFFER STREAMING (ഫയൽ സേവ് ചെയ്യാതെ)
     const response = await axios({
       method: 'get',
       url: downloadUrl,
       responseType: 'arraybuffer',
       headers: {
-        'User-Agent': 'Mozilla/5.0' 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
       }
     });
 
@@ -81,7 +82,7 @@ export default async (sock, msg, args) => {
     // 4. ഓഡിയോ അയക്കുന്നു
     await sock.sendMessage(chat, {
       audio: audioBuffer,
-      mimetype: 'audio/mpeg',
+      mimetype: 'audio/mp4', 
       ptt: false 
     }, { quoted: msg });
 

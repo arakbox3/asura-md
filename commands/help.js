@@ -55,8 +55,6 @@ export default async (sock, msg, args) => {
 ┃ ⊙📢 .Tagall–Mention all group members.
 ┃ ⊙📷 .Image <name>–Search and save photos.
 ┃ ⊙✉ .Reply <text>-Swipe any message to set.
-┃ ⊙✉ .Reply del-To remove a specific reply.
-┃ ⊙✉ .Reply delall-To clear all replies.
 ╚━━━⛥❖⛥━━━❥❥❥
 ┃ °☆°☆°☆°☆°☆°☆°☆°☆°
 ╠━━━━⛥❖⛥━━━❥❥❥

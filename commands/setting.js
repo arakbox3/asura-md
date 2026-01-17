@@ -7,26 +7,26 @@ export default async (sock, msg, args) => {
     const pushName = msg.pushName || "User";
     const imagePath = './media/thumb.jpg';
 
-    // 🕒 Runtime, Date & Time
+    // 🕒 1. Runtime Calculation
     const uptime = process.uptime();
     const hours = Math.floor(uptime / 3600);
     const minutes = Math.floor((uptime % 3600) / 60);
     const seconds = Math.floor(uptime % 60);
+
+    // 📅 2. Real-time Date & Time
     const date = new Date().toLocaleDateString('en-GB');
     const time = new Date().toLocaleTimeString('en-IN', { hour12: true });
 
-    // 👤 Profile Info
-    const userBio = (await sock.fetchStatus(sender).catch(() => ({ status: 'No Bio Found' }))).status;
-    const userNumber = sender.split('@')[0];
+    // 👤 3. Profile Discovery
+    let userBio = "No Bio Found";
+    try {
+        const status = await sock.fetchStatus(sender);
+        userBio = status.status || "No Bio Found";
+    } catch { userBio = "Privacy Protected"; }
 
-    // 📂 കമാൻഡുകൾ റീഡ് ചെയ്യുന്നു
-    const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-    const rows = commandFiles.map(file => ({
-        title: `.${file.replace('.js', '')}`,
-        rowId: `.${file.replace('.js', '')}`,
-        description: `Execute ${file.replace('.js', '')} command`
-    }));
+    const temp = Math.floor(Math.random() * (35 - 24) + 24); 
 
+    // 🏮 Design Structure
     const design = `
 *👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
@@ -34,11 +34,10 @@ export default async (sock, msg, args) => {
 *┊ ☪︎⋆*
 *⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
 *✧* 「 👺Asura MD 」
-*╰────────────❂*
-*°☆°☆°☆°☆°☆°☆°☆°☆°*
-╔  〔  ASURA MD  𓆩ꨄ︎𓆪  〕  ╗
-   *👋 Hello, ${pushName}!*
-╚═══════════╝
+*╰───────────❂*
+* °☆°☆°☆°☆°☆°☆°☆°☆°*
+ 〔  ASURA MD  𓆩ꨄ︎𓆪  〕  
+ *👋 Hello, ${pushName}!*
 ╭─「 📟 *SYSTEM INFO* 」
 │🔹 *Runtime* : ${hours}h ${minutes}m ${seconds}s
 │🔹 *Owner* : arun.cumar
@@ -48,40 +47,45 @@ export default async (sock, msg, args) => {
 ├─「 👤 *USER PROFILE* 」
 │🔹 *Name* : ${pushName}
 │🔹 *Bio* : ${userBio}
-│🔹 *Number* : ${userNumber}
-│🔹 *Location* : Kerala, India
+│🔹 *Number* : ${sender.split('@')[0]}
 │
-├─「 🌤️ *WEATHER* 」
-│🔹 *Condition* : Clear Sky
-│🔹 *Temp* : 29°C
-│
-├─「 📊 *ACTIVITY* 」
-│🔹 *Last Message Count* : ${Math.floor(Math.random() * 500)}
-│🔹 *Status* : Active 🟢
+├─「 🌤️ *ENVIRONMENT* 」
+│🔹 *Weather* : Partly Cloudy
+│🔹 *Temp* : ${temp}°C
 ╰────────────●●►`;
 
-    // 📋 Interactive List Message (Photo സഹിതം)
-    const listMessage = {
-        text: design,
-        footer: "┋ ᴍᴀᴅᴇ ʙʏ arun cumar ༊\n© 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ",
-        title: "⚙️ *ASURA MD COMMAND CENTER*",
-        buttonText: "SELECT COMMANDS ⚡",
-        sections: [
-            {
-                title: "AVAILABLE COMMANDS",
-                rows: rows
+    // 🔘 5. Template Message (Hydrated Buttons)
+    // ശ്രദ്ധിക്കുക: Baileys-ന്റെ പുതിയ വേർഷനുകളിൽ 'viewOnceMessage' വഴിയാണ് ഇത് അയക്കേണ്ടത്
+    const templateMessage = {
+        viewOnceMessage: {
+            message: {
+                templateMessage: {
+                    hydratedTemplate: {
+                        imageMessage: fs.existsSync(imagePath) 
+                            ? (await sock.prepareWAMessageMedia({ image: fs.readFileSync(imagePath) }, { upload: sock.waUploadToServer })).imageMessage 
+                            : null,
+                        hydratedContentText: design,
+                        hydratedFooterText: '┋ ᴍᴀᴅᴇ ʙʏ arun cumar ༊',
+                        hydratedButtons: [
+                            { index: 1, quickReplyButton: { displayText: '🏓 PING', id: '.ping' } },
+                            { index: 2, quickReplyButton: { displayText: '🩸 ALIVE', id: '.alive' } },
+                            { index: 3, quickReplyButton: { displayText: '↩️ MAIN MENU', id: '.menu' } },
+                            { index: 4, quickReplyButton: { displayText: '👤 OWNER', id: '.owner' } }
+                        ]
+                    }
+                }
             }
-        ]
+        }
     };
 
     try {
-        // ഇമേജ് ഉണ്ടെങ്കിൽ അത് ആദ്യം അയക്കും, ശേഷം ലിസ്റ്റ് അയക്കും
-        if (fs.existsSync(imagePath)) {
-            await sock.sendMessage(chat, { image: fs.readFileSync(imagePath), caption: "Asura MD Status Update" });
-        }
-        await sock.sendMessage(chat, listMessage, { quoted: msg });
+        await sock.relayMessage(chat, templateMessage, { messageId: msg.key.id });
     } catch (e) {
-        console.error("List Message Error:", e);
-        await sock.sendMessage(chat, { text: design });
+        console.error("Button Error:", e);
+       
+        await sock.sendMessage(chat, { 
+            image: fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : { url: 'https://placeholder.com/asura.jpg' }, 
+            caption: design + "\n\n*Commands:* .ping, .alive, .menu, .owner" 
+        }, { quoted: msg });
     }
 };

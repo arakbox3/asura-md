@@ -1,102 +1,83 @@
 export default async (sock, msg, args) => {
-    try {
-        const chat = m.key.remoteJid;
-        const sender = m.key.participant || m.key.remoteJid;
-        const isGroup = chat.endsWith('@g.us');
-        const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-        
-        // മെസ്സേജിൽ നിന്ന് കമാൻഡ് വേർതിരിച്ചെടുക്കുന്നു
-        const prefix = "."; 
-        const body = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || "";
-        if (!body.startsWith(prefix)) return;
-        
-        const command = body.slice(prefix.length).trim().split(/\s+/).shift().toLowerCase();
-        const fullArgs = body.replace(prefix + command, "").trim();
+    const chat = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const isGroup = chat.endsWith('@g.us');
+    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
 
-        // Database Initialization
-        if (!global.db) global.db = { groups: {}, settings: { mode: 'public', antispam: false } };
-        if (isGroup && !global.db.groups[chat]) global.db.groups[chat] = { antilink: false, welcome: false };
+    // ഡാറ്റാബേസ് സെറ്റപ്പ്
+    if (!global.db) global.db = { groups: {}, settings: { mode: 'public', antispam: false } };
+    if (!global.db.groups[chat]) global.db.groups[chat] = { antilink: false, welcome: false };
 
-        // 1. PUBLIC / PRIVATE MODE (Owner Only)
-        if (command === 'public') {
+    const body = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").toLowerCase();
+    const command = body.split(' ')[0].slice(1); // കമാൻഡ് എടുക്കുന്നു
+    const action = body.split(' ')[1]; // on/off/public/private എടുക്കുന്നു
+
+    // 1. MODE (Public/Private)
+    if (command === 'mode') {
+        if (action === 'public') {
             global.db.settings.mode = 'public';
-            return sock.sendMessage(chat, { text: "🌐 *BOT MODE: PUBLIC*" });
-        }
-        if (command === 'private') {
+            return await sock.sendMessage(chat, { text: "🌐 *BOT MODE SET TO PUBLIC*" });
+        } else if (action === 'private') {
             global.db.settings.mode = 'private';
-            return sock.sendMessage(chat, { text: "🔒 *BOT MODE: PRIVATE*" });
+            return await sock.sendMessage(chat, { text: "🔒 *BOT MODE SET TO PRIVATE*" });
         }
+    }
 
-        // 2. SETTINGS MENU
-        if (command === 'setting' || command === 'settings' || command === 'set') {
-            const antilinkStatus = global.db.groups[chat]?.antilink ? "🟢 ON" : "🔴 OFF";
-            const welcomeStatus = global.db.groups[chat]?.welcome ? "🟢 ON" : "🔴 OFF";
-            const spamStatus = global.db.settings.antispam ? "🟢 ON" : "🔴 OFF";
-            const modeStatus = global.db.settings.mode.toUpperCase();
+    // 2. ANTILINK (on/off)
+    if (command === 'antilink' && isGroup) {
+        global.db.groups[chat].antilink = (action === 'on');
+        return await sock.sendMessage(chat, { text: `🛡️ *ANTILINK:* ${action === 'on' ? 'ON' : 'OFF'}` });
+    }
 
-            const menu = `
+    // 3. ANTISPAM (on/off)
+    if (command === 'antispam') {
+        global.db.settings.antispam = (action === 'on');
+        return await sock.sendMessage(chat, { text: `⚠️ *ANTISPAM:* ${action === 'on' ? 'ON' : 'OFF'}` });
+    }
+
+    // 4. WELCOME (on/off)
+    if (command === 'welcome' && isGroup) {
+        global.db.groups[chat].welcome = (action === 'on');
+        return await sock.sendMessage(chat, { text: `👋 *WELCOME:* ${action === 'on' ? 'ON' : 'OFF'}` });
+    }
+
+    // SETTINGS MENU (.setting)
+    if (command === 'setting' || command === 'settings') {
+        const menu = `
 ╭━━〔 𓆩 👺 *ASURA MD* 𓆪 〕━━┈⊷
 ┃
-┃ ⚙️ *SYSTEM SETTINGS*
+┃ ⚙️ *MAIN SETTINGS*
 ┃
-┃ 🔒 *MODE:* ${modeStatus}
-┃ 🛡️ *ANTILINK:* ${antilinkStatus}
-┃ 👋 *WELCOME:* ${welcomeStatus}
-┃ ⚠️ *ANTISPAM:* ${spamStatus}
+┃ 🔒 *MODE:* ${global.db.settings.mode.toUpperCase()}
+┃ 🛡️ *ANTILINK:* ${global.db.groups[chat].antilink ? 'ON ✅' : 'OFF ❌'}
+┃ ⚠️ *ANTISPAM:* ${global.db.settings.antispam ? 'ON ✅' : 'OFF ❌'}
+┃ 👋 *WELCOME:* ${global.db.groups[chat].welcome ? 'ON ✅' : 'OFF ❌'}
 ┃
 ┣━━━━━━━━━━━━━━━┈⊷
-┃ 💡 *AVAILABLE COMMANDS:*
-┃ ⊙ .public | .private
-┃ ⊙ .antilink on/off
-┃ ⊙ .welcome on/off
-┃ ⊙ .antispam on/off
-┃ ⊙ .kick | .add | .tag
+┃ 💡 *Usage:*
+┃ .mode public/private
+┃ .antilink on/off
+┃ .antispam on/off
+┃ .welcome on/off
 ╰━━━━━━━━━━━━━━━┈⊷`;
-            return sock.sendMessage(chat, { text: menu });
-        }
+        return await sock.sendMessage(chat, { text: menu });
+    }
 
-        // 3. ADMIN TOOLS (Kick, Add, Tag)
-        if (isGroup) {
-            const groupMetadata = await sock.groupMetadata(chat);
-            const participants = groupMetadata.participants;
-            const isBotAdmin = participants.find(p => p.id === botId)?.admin;
-            const isSenderAdmin = participants.find(p => p.id === sender)?.admin;
+    // --- ബാക്ക്ഗ്രൗണ്ട് ലിങ്ക് ഫിൽട്ടർ (ഇത് ഒരിക്കൽ മാത്രം സെറ്റ് ചെയ്യും) ---
+    if (!global.asuraWatcher) {
+        global.asuraWatcher = true;
+        sock.ev.on('messages.upsert', async (update) => {
+            const m = update.messages[0];
+            if (!m.message || m.key.fromMe) return;
+            const cJid = m.key.remoteJid;
 
-            if (command === 'tag' && isSenderAdmin) {
-                const mentions = participants.map(p => p.id);
-                return sock.sendMessage(chat, { text: `📢 *${fullArgs || 'Attention Everyone!'}*`, mentions });
+            // Antilink Execution
+            if (cJid.endsWith('@g.us') && global.db.groups[cJid]?.antilink) {
+                const text = m.message.conversation || m.message.extendedTextMessage?.text || "";
+                if (/(https?:\/\/[^\s]+|www\.[^\s]+)/gi.test(text)) {
+                    await sock.sendMessage(cJid, { delete: m.key });
+                }
             }
-
-            if (command === 'kick' && isSenderAdmin && isBotAdmin) {
-                let user = m.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || m.message.extendedTextMessage?.contextInfo?.participant;
-                if (!user) return sock.sendMessage(chat, { text: "Reply to a message or tag someone." });
-                await sock.groupParticipantsUpdate(chat, [user], "remove");
-                return sock.sendMessage(chat, { text: "✅ Removed successfully." });
-            }
-
-            if (command === 'add' && isSenderAdmin && isBotAdmin) {
-                if (!fullArgs) return sock.sendMessage(chat, { text: "Enter number: .add 9199xxxx" });
-                const user = fullArgs.replace(/[^0-9]/g, '') + "@s.whatsapp.net";
-                await sock.groupParticipantsUpdate(chat, [user], "add");
-                return sock.sendMessage(chat, { text: "✅ Added successfully." });
-            }
-
-            // 4. ON/OFF TOGGLES
-            if (command === 'antilink') {
-                global.db.groups[chat].antilink = (fullArgs === 'on');
-                return sock.sendMessage(chat, { text: `🛡️ Antilink: ${fullArgs.toUpperCase()}` });
-            }
-            if (command === 'welcome') {
-                global.db.groups[chat].welcome = (fullArgs === 'on');
-                return sock.sendMessage(chat, { text: `👋 Welcome: ${fullArgs.toUpperCase()}` });
-            }
-            if (command === 'antispam') {
-                global.db.settings.antispam = (fullArgs === 'on');
-                return sock.sendMessage(chat, { text: `⚠️ Antispam: ${fullArgs.toUpperCase()}` });
-            }
-        }
-
-    } catch (e) {
-        console.error("Error in settings.js:", e);
+        });
     }
 };

@@ -4,62 +4,84 @@ import path from 'path';
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
-    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-    
-    // ബോട്ട് ഓണർ ആണോ എന്ന് പരിശോധിക്കുന്നു
-    const isOwner = botId.includes(sender.split('@')[0]);
-    if (!isOwner) return;
-
-    const mtype = Object.keys(msg.message)[0];
-    const body = mtype === 'conversation' ? msg.message.conversation :
-                 mtype === 'extendedTextMessage' ? msg.message.extendedTextMessage.text :
-                 mtype === 'imageMessage' ? msg.message.imageMessage.caption :
-                 mtype === 'videoMessage' ? msg.message.videoMessage.caption : '';
-
-    const command = body.slice(1).trim().split(/ +/)[0].toLowerCase();
+    const pushName = msg.pushName || "User";
     const imagePath = './media/thumb.jpg';
 
-    // ഡാറ്റാബേസ് സെറ്റപ്പ്
-    if (!global.db) global.db = { settings: { mode: 'public' } };
+    // 🕒 Runtime, Date & Time
+    const uptime = process.uptime();
+    const hours = Math.floor(uptime / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = Math.floor(uptime % 60);
+    const date = new Date().toLocaleDateString('en-GB');
+    const time = new Date().toLocaleTimeString('en-IN', { hour12: true });
 
-    let statusText = "";
-    if (command === 'public') {
-        global.db.settings.mode = 'public';
-        statusText = "🌐 *BOT MODE: PUBLIC*";
-    } else if (command === 'private') {
-        global.db.settings.mode = 'private';
-        statusText = "🔒 *BOT MODE: PRIVATE*";
-    } else {
-        return; // മറ്റ് കമാൻഡുകൾ ആണെങ്കിൽ ഒന്നും ചെയ്യണ്ട
-    }
+    // 👤 Profile Info
+    const userBio = (await sock.fetchStatus(sender).catch(() => ({ status: 'No Bio Found' }))).status;
+    const userNumber = sender.split('@')[0];
 
-    // ഡിസൈൻ ടെക്സ്റ്റ്
-    const design = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
+    // 📂 കമാൻഡുകൾ റീഡ് ചെയ്യുന്നു
+    const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+    const rows = commandFiles.map(file => ({
+        title: `.${file.replace('.js', '')}`,
+        rowId: `.${file.replace('.js', '')}`,
+        description: `Execute ${file.replace('.js', '')} command`
+    }));
+
+    const design = `
+*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
 *⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
 *✧* 「 👺Asura MD 」
 *╰────────────❂*
-╔━━━━━━━━━━❥❥❥
-┃ °☆°☆°☆°☆°☆°☆°☆°☆°
-┃  ${statusText}
-╠━━━━⛥❖⛥━━━❥❥❥
-╚━━━━⛥❖⛥━━━❥❥❥
+*°☆°☆°☆°☆°☆°☆°☆°☆°*
+╔  〔  ASURA MD  𓆩ꨄ︎𓆪  〕  ╗
+   *👋 Hello, ${pushName}!*
+╚═══════════╝
+╭─「 📟 *SYSTEM INFO* 」
+│🔹 *Runtime* : ${hours}h ${minutes}m ${seconds}s
+│🔹 *Owner* : arun.cumar
+│🔹 *Time* : ${time}
+│🔹 *Date* : ${date}
+│
+├─「 👤 *USER PROFILE* 」
+│🔹 *Name* : ${pushName}
+│🔹 *Bio* : ${userBio}
+│🔹 *Number* : ${userNumber}
+│🔹 *Location* : Kerala, India
+│
+├─「 🌤️ *WEATHER* 」
+│🔹 *Condition* : Clear Sky
+│🔹 *Temp* : 29°C
+│
+├─「 📊 *ACTIVITY* 」
+│🔹 *Last Message Count* : ${Math.floor(Math.random() * 500)}
+│🔹 *Status* : Active 🟢
+╰────────────●●►`;
 
-> *✅Select a command from the list above and type it with a dot.*
+    // 📋 Interactive List Message (Photo സഹിതം)
+    const listMessage = {
+        text: design,
+        footer: "┋ ᴍᴀᴅᴇ ʙʏ arun cumar ༊\n© 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ",
+        title: "⚙️ *ASURA MD COMMAND CENTER*",
+        buttonText: "SELECT COMMANDS ⚡",
+        sections: [
+            {
+                title: "AVAILABLE COMMANDS",
+                rows: rows
+            }
+        ]
+    };
 
-© 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
-𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ
-> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
-
-    // മെസ്സേജ് അയക്കുന്നു
-    if (fs.existsSync(imagePath)) {
-        await sock.sendMessage(chat, { 
-            image: fs.readFileSync(imagePath), 
-            caption: design 
-        }, { quoted: msg });
-    } else {
-        await sock.sendMessage(chat, { text: design }, { quoted: msg });
+    try {
+        // ഇമേജ് ഉണ്ടെങ്കിൽ അത് ആദ്യം അയക്കും, ശേഷം ലിസ്റ്റ് അയക്കും
+        if (fs.existsSync(imagePath)) {
+            await sock.sendMessage(chat, { image: fs.readFileSync(imagePath), caption: "Asura MD Status Update" });
+        }
+        await sock.sendMessage(chat, listMessage, { quoted: msg });
+    } catch (e) {
+        console.error("List Message Error:", e);
+        await sock.sendMessage(chat, { text: design });
     }
 };

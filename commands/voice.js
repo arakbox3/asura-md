@@ -6,7 +6,7 @@ export default async (sock, msg, args) => {
     let text = args.join(' ');
     const thumbPath = './media/thumb.jpg'; 
 
-    if (!text) return sock.sendMessage(chat, { text: "text message..." }, { quoted: msg });
+    if (!text) return sock.sendMessage(chat, { text: "എന്തെങ്കിലും ടൈപ്പ് ചെയ്യൂ..." }, { quoted: msg });
 
     try {
         // --- ഹ്യൂമൻ വോയ്‌സ് ലോജിക് ---
@@ -19,21 +19,14 @@ export default async (sock, msg, args) => {
             processedText += '?';
         }
 
-        // --- ലാംഗ്വേജ് ഡിറ്റക്ഷൻ (Fixed: text ഉപയോഗിച്ചു) ---
-let lang = 'en';
-if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';      // Malayalam
-else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; // Tamil
-else if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; // Hindi
-else if (/[\u0C00-\u0C7F]/.test(text)) lang = 'te'; // Telugu
-else if (/[\u0C80-\u0CFF]/.test(text)) lang = 'kn'; // Kannada
-else if (/[\u0A80-\u0AFF]/.test(text)) lang = 'gu'; // Gujarati
-else if (/[\u0980-\u09FF]/.test(text)) lang = 'bn'; // Bengali
-else if (/[\u0600-\u06FF]/.test(text)) lang = 'ur'; // Urdu / Arabic
-else if (/[\u0D80-\u0DFF]/.test(text)) lang = 'si'; // Sinhala (Hela)
-else if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(text)) lang = 'ko'; // Korean
-else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) lang = 'ja'; // Japanese
-else if (/[\u4E00-\u9FFF]/.test(text)) lang = 'zh'; // Chinese
-else if (/[a-zA-Z]/.test(text)) lang = 'en';      // English
+        // --- ലാംഗ്വേജ് ഡിറ്റക്ഷൻ ---
+        let lang = 'en';
+        if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';
+        else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta';
+        else if (/[\u0900-\u097F]/.test(text)) lang = 'hi';
+        else if (/[\u0C00-\u0C7F]/.test(text)) lang = 'te';
+        else if (/[\u0600-\u06FF]/.test(text)) lang = 'ur';
+        else if (/[a-zA-Z]/.test(text)) lang = 'en';
 
         // Direct Stream URL (No Download)
         const url = googleTTS.getAudioUrl(processedText.slice(0, 200), {
@@ -42,14 +35,16 @@ else if (/[a-zA-Z]/.test(text)) lang = 'en';      // English
             host: 'https://translate.google.com',
         });
 
+        // വോയ്‌സ് അയക്കുന്നു
         await sock.sendMessage(chat, { 
             audio: { url: url }, 
-            mimetype: 'audio/ogg', 
+            mimetype: 'audio/ogg; codecs=opus', 
             ptt: true,
+            waveform: new Uint8Array([0, 0, 100, 0, 50, 0, 100, 0, 50, 100, 0, 50, 100, 0, 100]), // Custom Waveform lines
             contextInfo: {
                 externalAdReply: {
                     title: `ASURA MD AI VOICE - ${lang.toUpperCase()}`,
-                    body: "Human-like Pronunciation Engine",
+                    body: "Smart AI Voice Engine",
                     thumbnail: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null,
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -61,6 +56,6 @@ else if (/[a-zA-Z]/.test(text)) lang = 'en';      // English
 
     } catch (e) {
         console.error("Voice Error:", e);
-        await sock.sendMessage(chat, { text: "Error occurred!" });
+        await sock.sendMessage(chat, { text: "Error: വോയ്‌സ് അയക്കാൻ കഴിഞ്ഞില്ല!" });
     }
 };

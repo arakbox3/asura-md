@@ -1,4 +1,5 @@
 import * as googleTTS from 'google-tts-api';
+import axios from 'axios';
 import fs from 'fs';
 
 export default async (sock, msg, args) => {
@@ -6,99 +7,39 @@ export default async (sock, msg, args) => {
     let text = args.join(' ');
     const thumbPath = './media/thumb.jpg'; 
 
-    if (!text) return sock.sendMessage(chat, { text: "എന്തെങ്കിലും ടൈപ്പ് ചെയ്യൂ..." }, { quoted: msg });
+    if (!text) return sock.sendMessage(chat, { text: "*how to use* .voice text message" }, { quoted: msg });
 
     try {
-        // --- ഹ്യൂമൻ വോയ്‌സ് ലോജിക് ---
+        // 1. ഹ്യൂമൻ വോയ്‌സ് ഫീൽ നൽകാൻ കോമ (,) ചേർക്കുന്നു
         let processedText = text.length > 10 ? text.replace(/\s+/g, ', ') : text;
-        if (/(എന്ത്|എവിടെ|എങ്ങനെ|ആര്|ആണോ|സുഖമാണോ)/i.test(text)) processedText += '?';
 
-        // --- ലാംഗ്വേജ് ഡിറ്റക്ഷൻ ---
-let lang = 'en';
-if (/[അ-ഹ]/.test(text)) lang = 'ml';              // Malayalam
-else if (/[क-ह]/.test(text)) lang = 'hi';         // Hindi
-else if (/[ক-হ]/.test(text)) lang = 'bn';         // Bengali
-else if (/[ਗ-ਹ]/.test(text)) lang = 'pa';         // Punjabi
-else if (/[ક-હ]/.test(text)) lang = 'gu';         // Gujarati
-else if (/[ଅ-ହ]/.test(text)) lang = 'or';         // Odia
-else if (/[அ-ஹ]/.test(text)) lang = 'ta';         // Tamil
-else if (/[అ-హ]/.test(text)) lang = 'te';         // Telugu
-else if (/[ಅ-ಹ]/.test(text)) lang = 'kn';         // Kannada
-else if (/[a-zA-Z]/.test(text)) lang = 'en';         // English 
+        // 2. ലാംഗ്വേജ് ഡിറ്റക്ഷൻ (മലയാളം, തമിഴ്, ഹിന്ദി, ഇംഗ്ലീഷ്)
+        let lang = 'en';
+        if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';      // Malayalam
+        else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; // Tamil
+        else if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; // Hindi
+        else if (/[a-zA-Z]/.test(text)) lang = 'en';       // English
 
-// Arabic Script (10+ languages)
-else if (/[ء-ي]/.test(text)) lang = 'ar';         // Arabic
-else if (/[ء-ي]/.test(text)) lang = 'ur';         // Urdu
-else if (/[ء-ي]/.test(text)) lang = 'fa';         // Persian
-else if (/[ء-ي]/.test(text)) lang = 'ps';         // Pashto
-else if (/[ء-ي]/.test(text)) lang = 'sd';         // Sindhi
-else if (/[ء-ي]/.test(text)) lang = 'ku';         // Kurdish
-else if (/[ء-ي]/.test(text)) lang = 'ug';         // Uyghur
-else if (/[ء-ي]/.test(text)) lang = 'dv';         // Dhivehi
-
-// Latin Extended (30+ languages)
-else if (/[a-zA-Z]/.test(text)) lang = 'en';      // English
-else if (/[à-ÿ]/i.test(text)) lang = 'fr';        // French
-else if (/[áéíóúñ]/i.test(text)) lang = 'es';     // Spanish
-else if (/[äöüß]/i.test(text)) lang = 'de';       // German
-else if (/[ąćęłńóśżź]/i.test(text)) lang = 'pl';  // Polish
-else if (/[čćđšž]/i.test(text)) lang = 'hr';      // Croatian
-else if (/[ăâîșț]/i.test(text)) lang = 'ro';      // Romanian
-else if (/[ğış]/i.test(text)) lang = 'tr';        // Turkish
-else if (/[øåæ]/i.test(text)) lang = 'da';        // Danish
-else if (/[åäö]/i.test(text)) lang = 'sv';        // Swedish
-else if (/[éèêç]/i.test(text)) lang = 'pt';       // Portuguese
-else if (/[žšč]/i.test(text)) lang = 'sl';        // Slovenian
-else if (/[ýðþ]/i.test(text)) lang = 'is';        // Icelandic
-else if (/[ășț]/i.test(text)) lang = 'md';        // Moldovan
-
-// Cyrillic Script (15+ languages)
-else if (/[А-Яа-я]/.test(text)) lang = 'ru';      // Russian
-else if (/[А-Яа-я]/.test(text)) lang = 'uk';      // Ukrainian
-else if (/[А-Яа-я]/.test(text)) lang = 'bg';      // Bulgarian
-else if (/[А-Яа-я]/.test(text)) lang = 'sr';      // Serbian
-else if (/[А-Яа-я]/.test(text)) lang = 'mk';      // Macedonian
-else if (/[А-Яа-я]/.test(text)) lang = 'kk';      // Kazakh
-else if (/[А-Яа-я]/.test(text)) lang = 'uz';      // Uzbek
-else if (/[А-Яа-я]/.test(text)) lang = 'mn';      // Mongolian
-
-// East Asian
-else if (/[\u4E00-\u9FFF]/.test(text)) lang = 'zh'; // Chinese
-else if (/[\u3040-\u30FF]/.test(text)) lang = 'ja'; // Japanese
-else if (/[\uAC00-\uD7AF]/.test(text)) lang = 'ko'; // Korean
-
-// Southeast Asian
-else if (/[\u0E00-\u0E7F]/.test(text)) lang = 'th'; // Thai
-else if (/[\u0E80-\u0EFF]/.test(text)) lang = 'lo'; // Lao
-else if (/[\u1780-\u17FF]/.test(text)) lang = 'km'; // Khmer
-else if (/[\u1000-\u109F]/.test(text)) lang = 'my'; // Burmese
-
-// African
-else if (/[ɓɗŋ]/i.test(text)) lang = 'ha';         // Hausa
-else if (/[ɛɔ]/i.test(text)) lang = 'yo';          // Yoruba
-else if (/[ŋ]/i.test(text)) lang = 'ig';           // Igbo
-
-// Others
-else if (/[\u0590-\u05FF]/.test(text)) lang = 'he'; // Hebrew
-else if (/[\u1200-\u137F]/.test(text)) lang = 'am'; // Amharic
-else if (/[\u0980-\u09FF]/.test(text)) lang = 'as'; // Assamese
-
-        // 1. Google TTS URL നിർമ്മിക്കുന്നു
-        const audioUrl = googleTTS.getAudioUrl(processedText.slice(0, 200), {
+        // 3. Google TTS URL നിർമ്മിക്കുന്നു
+        const url = googleTTS.getAudioUrl(processedText.slice(0, 200), {
             lang: lang,
             slow: false,
             host: 'https://translate.google.com',
         });
 
-        //  (No Download)
+        // 4. ഡൗൺലോഡ് ചെയ്യാതെ ലിങ്കിൽ നിന്ന് നേരിട്ട് ഡാറ്റ എടുക്കുന്നു (No Download)
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const voiceBuffer = Buffer.from(response.data, 'utf-8');
+
+        // 5. വോയ്‌സ് മെസ്സേജ് അയക്കുന്നു
         await sock.sendMessage(chat, { 
-            audio: { url: audioUrl }, 
-            mimetype: 'audio/ogg', 
+            audio: voiceBuffer, 
+            mimetype: 'audio/mp4', 
             ptt: true,
             contextInfo: {
                 externalAdReply: {
-                    title: `ASURA AI VOICE - ${lang.toUpperCase()}`,
-                    body: "Human-like AI Voice Engine",
+                    title: `ASURA AI - ${lang.toUpperCase()} VOICE`,
+                    body: "Clear Human Pronunciation",
                     thumbnail: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null,
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -110,6 +51,6 @@ else if (/[\u0980-\u09FF]/.test(text)) lang = 'as'; // Assamese
 
     } catch (e) {
         console.error("Voice Error:", e);
-        await sock.sendMessage(chat, { text: "Error" });
+        await sock.sendMessage(chat, { text: "Error: വോയ്‌സ് അയക്കാൻ കഴിഞ്ഞില്ല!" });
     }
 };

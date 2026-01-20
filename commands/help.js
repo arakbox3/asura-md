@@ -60,7 +60,7 @@ export default async (sock, msg, args) => {
 
         await sock.sendMessage(chat, { react: { text: "✔", key: msg.key } });
 
-        const imagePath = './media/asura.png'; 
+        const imagePath = './media/asura.jpg'; 
         const songPath = './media/song.opus'; 
 
         const helpText = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
@@ -110,7 +110,7 @@ export default async (sock, msg, args) => {
         // 3. Send Image with help Text
 if (fs.existsSync(imagePath)) {
     await sock.sendMessage(chat, {
-        document: { url: './media/asura.png' },
+        document: { url: './media/asura.jpg' },
         mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         fileName: '👺 ASURA MD', 
         fileLength: 9999999999999,

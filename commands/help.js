@@ -11,43 +11,43 @@ export default async (sock, msg, args) => {
         const { key } = await sock.sendMessage(chat, { text: "👺 Asura MD Loading..." });
 
         const frames = [
-`❲👺Asura MD❳ 
+`👻👻👻•❲👺Asura MD❳•👻👻👻 
 ⌛Loading.
  🔹️▰▱▱▱▱▱▱▱▱▱ 🔸️10%`,
 
-`•❲👺Asura MD❳•
+`👾👾👾•❲👺Asura MD❳•👾👾👾
  ⏳Loading.. 
 🔹️ ▰▰▱▱▱▱▱▱▱▱ 🔸️20%`,
 
-`••❲👺Asura MD❳•• 
+`😈😈😈•❲👺Asura MD❳•😈😈😈 
 ⏳Loading... 
 🔹️ ▰▰▰▱▱▱▱▱▱▱ 🔸️30%`,
 
-`•••❲👺Asura MD❳••• 
+`😁😁😁•❲👺Asura MD❳•😁😁😁
 ⌛Loading. 
 🔹️ ▰▰▰▰▱▱▱▱▱▱ 🔸️40%`,
 
-`❲👺Asura MD❳ 
+`😎😎😎•❲👺Asura MD❳•😎😎😎 
 ⏳Loading.. 
 🔹️ ▰▰▰▰▰▱▱▱▱▱ 🔸️50%`,
 
-`•❲👺Asura MD❳•
+`💣💣💣•❲👺Asura MD❳•💣💣💣
  ⌛Loading...
 🔹️ ▰▰▰▰▰▰▱▱▱▱ 🔸️60%`,
 
-`••❲👺Asura MD❳•• 
+`💥💥💥•❲👺Asura MD❳•💥💥💥 
 ⏳Loading. 
 🔹️▰▰▰▰▰▰▰▱▱▱ 🔸️70%`,
 
-`•••❲👺Asura MD❳••• 
+`🤩🤩🤩•❲👺Asura MD❳•🤩🤩🤩 
 ⌛Loading.. 
 🔹️ ▰▰▰▰▰▰▰▰▱▱ 🔸️80%`,
 
-`❲👺Asura MD❳ 
+`⭕⭕⭕•❲👺Asura MD❳•⭕⭕⭕ 
 ⏳Loading... 
 🔹️ ▰▰▰▰▰▰▰▰▰▱ 🔸️90%`,
 
-`•❲👺Asura MD❳• 
+`  🎉⭕•❲👺Asura MD❳•⭕🎉 
 ✅ ▰▰▰▰▰▰▰▰▰▰ 🔸️100%
  👺 Asura MD Engine Ready!`,
 

@@ -62,7 +62,7 @@ export default async (sock, msg, args) => {
 
         await sock.sendMessage(chat, { react: { text: "✅", key: msg.key } });
 
-        const imagePath = './media/thumb.jpg'; 
+        const imagePath = './media/menu.jpg'; 
         const songPath = './media/song.opus'; 
 
         const menuText = `*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*

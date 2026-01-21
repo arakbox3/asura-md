@@ -6,7 +6,7 @@ export default async (sock, msg, args) => {
     const text = args.join(' ');
     const thumbPath = './image/thumb.jpg'; 
 
-    if (!text) return sock.sendMessage(chat, { text: ".Ai  who is Cr7" }, { quoted: msg });
+    if (!text) return sock.sendMessage(chat, { text: ".Search  who is Cr7" }, { quoted: msg });
 
     try {
         // ഗൂഗിൾ സെർച്ച് ചെയ്യുന്നു

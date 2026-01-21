@@ -1,4 +1,5 @@
 import * as googleTTS from 'google-tts-api';
+import axios from 'axios';
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
@@ -7,35 +8,38 @@ export default async (sock, msg, args) => {
     if (!text) return sock.sendMessage(chat, { text: "*Example: .voice Hello how are you*" }, { quoted: msg });
 
     try {
-        // ---(Language Detection) ---
-        let lang = 'en'; // Default English
-        if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';      // Malayalam
-        else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; // Tamil
-        else if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; // Hindi
-        else if (/[\u0600-\u06FF]/.test(text)) lang = 'ar'; // Arabic
+        // --- Language Detection ---
+        let lang = 'en';
+        if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';      
+        else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; 
+        else if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; 
 
-        // --- Unlimited Text Support (Split into chunks) --
+        // Google TTS URL എടുക്കുന്നു
         const results = googleTTS.getAllAudioUrls(text, {
             lang: lang,
             slow: false,
             host: 'https://translate.google.com',
         });
 
-        // ആദ്യത്തെ യുആർഎൽ എടുക്കുന്നു (ഡൗൺലോഡ് ഇല്ലാതെ അയക്കാൻ)
         if (results && results.length > 0) {
             const audioUrl = results[0].url;
 
+            // --- ഡൗൺലോഡ് ചെയ്യാതെ Buffer വഴി അയക്കുന്നു ---
+            const response = await axios.get(audioUrl, { responseType: 'arraybuffer' });
+            const buffer = Buffer.from(response.data, 'utf-8');
+
             await sock.sendMessage(chat, { 
-                audio: { url: audioUrl }, 
+                audio: buffer, 
                 mimetype: 'audio/mpeg', 
                 ptt: true 
             }, { quoted: msg });
+
         } else {
-            throw new Error("error 404");
+            throw new Error("poyi");
         }
 
     } catch (e) {
         console.error("TTS Error:", e);
-        await sock.sendMessage(chat, { text: "Error: 😥!" });
+        await sock.sendMessage(chat, { text: "Error: 😥" });
     }
 };

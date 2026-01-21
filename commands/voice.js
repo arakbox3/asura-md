@@ -6,33 +6,25 @@ export default async (sock, msg, args) => {
     let text = args.join(' ');
     const thumbPath = './media/thumb.jpg'; 
 
-    if (!text) return sock.sendMessage(chat, { text: "എന്തെങ്കിലും ടൈപ്പ് ചെയ്യൂ..." }, { quoted: msg });
+    if (!text) return sock.sendMessage(chat, { text: ".voice hello ..." }, { quoted: msg });
 
     try {
-        // --- ഹ്യൂമൻ വോയ്‌സ് ഫീൽ നൽകാൻ ചെറിയ തിരുത്തലുകൾ ---
-        // വാക്കുകൾക്കിടയിൽ കോമയിട്ടാൽ ഗൂഗിൾ ശ്വാസം വിടുന്നത് പോലെ ഇടവേളയെടുക്കും (Medium Speed Feel)
-        let processedText = text.replace(/\s+/g, ', '); 
-
-        // --- ലാംഗ്വേജ് ഓട്ടോമാറ്റിക് ആയി തിരിച്ചറിയുന്നു ---
+     
         let lang = 'en';
-        if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';      // Malayalam
-        else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; // Tamil
-        else if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; // Hindi
-        else if (/[\u0600-\u06FF]/.test(text)) lang = 'ar'; // Arabic
-        else if (/[a-zA-Z]/.test(text)) lang = 'en';       // English
+        if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml';      
+        else if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; 
+        else if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; 
+        else if (/[\u0600-\u06FF]/.test(text)) lang = 'ar'; 
 
-        // --- Audio URL നിർമ്മിക്കുന്നു (No Download) ---
-        // ഇതിൽ slow: false നൽകുന്നത് നോർമൽ ഹ്യൂമൻ സ്പീഡ് ലഭിക്കാനാണ്
-        const url = googleTTS.getAudioUrl(processedText.slice(0, 200), {
+        const url = googleTTS.getAudioUrl(text, {
             lang: lang,
             slow: false,
             host: 'https://translate.google.com',
         });
 
-        // --- നേരിട്ട് URL സ്ട്രീം ചെയ്യുന്നു ---
         await sock.sendMessage(chat, { 
             audio: { url: url }, 
-            mimetype: 'audio/mp4', 
+            mimetype: 'audio/ogg; codecs=opus'  
             ptt: true,
             contextInfo: {
                 externalAdReply: {
@@ -49,6 +41,6 @@ export default async (sock, msg, args) => {
 
     } catch (e) {
         console.error("TTS Error:", e);
-        await sock.sendMessage(chat, { text: "Error: വോയ്‌സ് ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല!" });
+        await sock.sendMessage(chat, { text: "Error: !" });
     }
 };

@@ -82,7 +82,7 @@ export default async (sock, msg, args) => {
 ┃ ⊙🖼️ .Sticker–Turn image/video/gif into a sticker.
 ┃ ⊙🎲 .Game–Play built-in games.
 ┃ ⊙🎭 .Fun–Jokes and fun activities.
-┃ ⊙🤖 .Ai <text>–Chat with the AI.
+┃ ⊙🔍 .Search–Explore any Information
 ┃ ⊙🆎️ .Font <text>–Change text to stylish fonts.
 ┃ ⊙👤 .Owner–Get creator's info.
 ┃ ⊙🤯 .Play–built-in games.

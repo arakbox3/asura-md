@@ -40,13 +40,13 @@ export default async (sock, msg, args) => {
         if (fs.existsSync(songPath)) {
             await sock.sendMessage(chat, { 
                 audio: fs.readFileSync(songPath), 
-                mimetype: 'audio/mpeg', 
+                mimetype: 'audio/ogg', 
                 ptt: true 
             }, { quoted: msg });
         }
 
         // 3. Ads)
-        const groupLink = "https://chat.whatsapp.com/LC3HXrnNI8J0481tjPTbtp";
+        const groupLink = "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24";
         const channelLink = "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24";
         
         const adMsg = `🏮 *Join our Community:*
@@ -64,8 +64,8 @@ Stay updated with Asura MD
                     body: "Click to Follow our Channel! ✨",
                     mediaType: 1,
                     sourceUrl: channelLink, 
-                    showAdAttribution: true,
-                    renderLargerThumbnail: false
+                    showAdAttribution: false,
+                    renderLargerThumbnail: true 
                 }
             }
         });

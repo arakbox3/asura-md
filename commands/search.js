@@ -1,36 +1,38 @@
-import wiki from 'wikipedia';
+import axios from 'axios';
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const query = args.join(' ');
 
-    if (!query) return sock.sendMessage(chat, { text: "🔍 എന്താണ് തിരയേണ്ടത്?\nExample: *.Search Kerala*" }, { quoted: msg });
+    if (!query) return sock.sendMessage(chat, { text: "🔍 എന്താണ് തിരയേണ്ടത്? \nExample: .Search Space" }, { quoted: msg });
 
     try {
-        // വിക്കിപീഡിയയിൽ തിരയുന്നു
-        const page = await wiki.page(query);
-        
-        // ആ വിഷയത്തിന്റെ ചുരുക്കരൂപം (Summary) എടുക്കുന്നു
-        const summary = await page.summary();
+        // വിക്കിപീഡിയ ഒഫീഷ്യൽ എപിഐ വഴി വിവരങ്ങൾ എടുക്കുന്നു (ഇത് ഫ്രീ ആണ്)
+        const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+        const response = await axios.get(url);
+        const data = response.data;
 
-        let wikiText = `📚 *ASURA MD Searching Engine* 📚\n\n`;
-        wikiText += `✨ *Title:* ${summary.title}\n`;
-        wikiText += `📝 *Description:* ${summary.description || 'No description available'}\n\n`;
-        wikiText += `📖 *Summary:* ${summary.extract}\n\n`;
-        wikiText += `_Source: Wikipedia_`;
+        if (data.type === 'disambiguation' || data.title === 'Not found') {
+            return sock.sendMessage(chat, { text: "❌ കൃത്യമായ വിവരങ്ങൾ കണ്ടെത്താനായില്ല. ദയവായി കുറച്ചുകൂടി വ്യക്തമായി ടൈപ്പ് ചെയ്യൂ." });
+        }
 
-        // ചിത്രം ഉണ്ടെങ്കിൽ ചിത്രത്തോടൊപ്പം അയക്കുന്നു, ഇല്ലെങ്കിൽ ടെക്സ്റ്റ് മാത്രം
-        if (summary.thumbnail && summary.thumbnail.source) {
+        let wikiMessage = `📚 *ASURA MD SEARCH ENGINE: ${data.title.toUpperCase()}*\n\n`;
+        wikiMessage += `📝 *Description:* ${data.description || 'Information available'}\n\n`;
+        wikiMessage += `📖 *Summary:* ${data.extract}\n\n`;
+        wikiMessage += `_Source: Wikipedia_`;
+
+        // ചിത്രം ഉണ്ടെങ്കിൽ അത് സ്ട്രീം ചെയ്യുന്നു
+        if (data.thumbnail && data.thumbnail.source) {
             await sock.sendMessage(chat, { 
-                image: { url: summary.thumbnail.source }, 
-                caption: wikiText 
+                image: { url: data.thumbnail.source }, 
+                caption: wikiMessage 
             }, { quoted: msg });
         } else {
-            await sock.sendMessage(chat, { text: wikiText }, { quoted: msg });
+            await sock.sendMessage(chat, { text: wikiMessage }, { quoted: msg });
         }
 
     } catch (e) {
         console.error("Wiki Error:", e);
-        await sock.sendMessage(chat, { text: "❌ ക്ഷമിക്കണം, വിവരങ്ങൾ കണ്ടെത്താനായില്ല!" });
+        await sock.sendMessage(chat, { text: "❌ ഈ വിഷയത്തെക്കുറിച്ച് വിവരങ്ങൾ ലഭ്യമല്ല!" });
     }
 };

@@ -93,6 +93,7 @@ export default async (sock, msg, args) => {
 ​┃ ⊙🎤   .Voice <text>
 ┃ ⊙👁   .View 
 ┃ ⊙👥   .Group 
+┃ ⊙💳   .Pay
 ┃ ⊙📓   .Help
 ╚━━━⛥❖⛥━━━❥❥❥
 ┃ °☆°☆°☆°☆°☆°☆°☆°☆°

@@ -1,11 +1,14 @@
+import fs from 'fs';
+
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    // --- SETUP YOUR INFO ---
+    // --- CONFIGURATION ---
     const myUpi = "08arun7@upi"; 
     const name = "Asura MD Admin";
-    const amount = args[0] || "10"; 
+    const amount = args[0] || "10";
+    const thumbPath = './media/asura.jpg'; 
 
     // Payment Deep Link
     const payUrl = `upi://pay?pa=${myUpi}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
@@ -15,13 +18,6 @@ export default async (sock, msg, args) => {
 
         // Stylish Design Box
         const payBox = `
-*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
-*┊ ┊ ┊ ┊ ┊*
-*┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
-*┊ ☪︎⋆*
-*⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
-*✧* 「 👺Asura MD 」
-*╰────────────❂*
 ╭━━〔 💳 *SIMPLE PAY* 〕━━┈⊷
 ┃
 ┃  👤 *Receiver:* ${name}
@@ -37,27 +33,32 @@ export default async (sock, msg, args) => {
 ┃ _GPay, PhonePe, or Paytm._
 ┃
 ╰━━━━━━━━━━━━━━━┈⊷
-© 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
-𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ
-> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
+> *© ASURA MD SYSTEM*`;
 
-        // Sending with Ad-Reply Style (Better Visibility)
+        // Image Buffer തയ്യാറാക്കുന്നു
+        let buffer;
+        if (fs.existsSync(thumbPath)) {
+            buffer = fs.readFileSync(thumbPath);
+        }
+
+        // മെസ്സേജ് അയക്കുന്നു
         await sock.sendMessage(from, { 
             text: payBox,
             contextInfo: {
                 externalAdReply: {
-                    title: "FAST UPI PAYMENT",
-                    body: `Pay ₹${amount} to ${name}`,
+                    title: "ASURA QUICK PAYMENT",
+                    body: `Ready to pay ₹${amount}?`,
                     mediaType: 1,
                     sourceUrl: payUrl, 
-                    renderLargerThumbnail: false,
-                    showAdAttribution: true
+                    thumbnail: buffer,
+                    renderLargerThumbnail: true, 
+                    showAdAttribution: false
                 }
             }
         }, { quoted: msg });
 
     } catch (e) {
-        console.error(e);
-        await sock.sendMessage(from, { text: "❌ Payment link generation failed!" });
+        console.error('Payment Error:', e);
+        await sock.sendMessage(from, { text: "❌ Error generating payment link." });
     }
 };

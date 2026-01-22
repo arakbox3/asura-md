@@ -15,6 +15,13 @@ export default async (sock, msg, args) => {
 
         // Stylish Design Box
         const payBox = `
+*👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
+*┊ ┊ ┊ ┊ ┊*
+*┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
+*┊ ☪︎⋆*
+*⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
+*✧* 「 👺Asura MD 」
+*╰────────────❂*
 ╭━━〔 💳 *SIMPLE PAY* 〕━━┈⊷
 ┃
 ┃  👤 *Receiver:* ${name}
@@ -30,7 +37,9 @@ export default async (sock, msg, args) => {
 ┃ _GPay, PhonePe, or Paytm._
 ┃
 ╰━━━━━━━━━━━━━━━┈⊷
-> *© 2026 ASURA MD SYSTEM*`;
+© 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
+𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ
+> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
 
         // Sending with Ad-Reply Style (Better Visibility)
         await sock.sendMessage(from, { 

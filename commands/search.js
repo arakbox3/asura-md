@@ -1,47 +1,82 @@
 import axios from 'axios';
 
+// --- API KEYS ARRAY ---
+const keys = [
+    "AIzaSyBTC8HtiBgpNFAZnm_nJyH32dwiEcsVX4o",
+    "AIzaSyB5Vb84o2Wrdgd2jV44dKCJa-1EgeQ6mss",
+    "AIzaSyCOvyzPJ-0lrz1GResd8yWgiXy-yAuPqKU"
+];
+
+// കീ മാറി മാറി ഉപയോഗിക്കാൻ ഒരു ഇൻഡെക്സ് സെറ്റ് ചെയ്യുന്നു
+let keyIndex = 0;
+
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
     const query = args.join(' ');
+    const sender = msg.key.participant || msg.key.remoteJid;
 
-    if (!query) return sock.sendMessage(from, { text: "🔍 *What do you want to search?*" }, { quoted: msg });
+    if (!query) return sock.sendMessage(from, { 
+        text: "✨ *ASURA MD  ASSISTANT*\n\nProvide a query to start. \nExample: `.Search Write a poem about rain`" 
+    }, { quoted: msg });
 
     try {
         await sock.sendMessage(from, { react: { text: "🧠", key: msg.key } });
 
-        // ഗൂഗിൾ സെർച്ച് റിസൾട്ട് നേരിട്ട് സ്ക്രാപ്പ് ചെയ്യുന്നു
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&hl=en`;
-        
-        const { data } = await axios.get(searchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
-            }
+        // ഓരോ തവണയും അടുത്ത കീ തിരഞ്ഞെടുക്കുന്നു (Round Robin logic)
+        const currentKey = keys[keyIndex];
+        keyIndex = (keyIndex + 1) % keys.length;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentKey}`;
+
+        const response = await axios.post(url, {
+            contents: [{ parts: [{ text: query }] }]
+        }, {
+            headers: { 'Content-Type': 'application/json' }
         });
 
-        // ഗൂഗിളിന്റെ നോപ്പറ്റ് (Snippet) അല്ലെങ്കിൽ നോളജ് ബോക്സ് വേർതിരിച്ചെടുക്കുന്നു
-        // ഇത് അഡ്വാൻസ്ഡ് ആയ ക്ലീനിംഗ് രീതിയാണ്
-        const match = data.match(/<div class="BNeawe s3v9rd AP7Wnd"><div><div class="BNeawe s3v9rd AP7Wnd">(.*?)<\/div>/);
-        let resultText = match ? match[1].replace(/<[^>]+>/g, '') : "Sorry, I couldn't find a quick summary for this.";
+        if (response.data && response.data.candidates) {
+            const aiResponse = response.data.candidates[0].content.parts[0].text;
 
-        if (resultText.length < 10) {
-            // മറ്റൊരു ടാഗ് കൂടി നോക്കുന്നു
-            const altMatch = data.match(/<div class="BNeawe iBp4i AP7Wnd">(.*?)<\/div>/);
-            resultText = altMatch ? altMatch[1].replace(/<[^>]+>/g, '') : resultText;
+            // --- MODERN DESIGN UI ---
+            const stylishMsg = `
+╭━━〔 🤖 *ASURA MD RESPONSE* 〕━━┈⊷
+┃
+┃ ⚡ *Query:* ${query.length > 20 ? query.substring(0, 20) + '...' : query}
+┃ 🧬 *Model:* 2.o
+┃
+┣━━━━━━━━━━━━━━┈⊷
+┃
+${aiResponse}
+┃
+╰━━━━━━━━━━━━━━━┈⊷
+> *© ASURA SEARCH ENGINE*`;
+
+            await sock.sendMessage(from, { 
+                text: stylishMsg,
+                mentions: [sender],
+                contextInfo: {
+                    externalAdReply: {
+                        title: "ASURA MD ARTIFICIAL INTELLIGENCE",
+                        body: "Powered by ASURA-MD",
+                        mediaType: 1,
+                        sourceUrl: "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24",
+                        renderLargerThumbnail: true,
+                        showAdAttribution: false 
+                    }
+                }
+            }, { quoted: msg });
+
+            await sock.sendMessage(from, { react: { text: "✅", key: msg.key } });
         }
 
-        // Stylish UI Design
-        let searchMsg = `*👺 ASURA MD INTELLIGENCE*\n`;
-        searchMsg += `*⊙────────────────────❂*\n\n`;
-        searchMsg += `🔍 *Search:* ${query}\n\n`;
-        searchMsg += `📝 *Result:* ${resultText}\n\n`;
-        searchMsg += `⊙──────────────────────\n`;
-        searchMsg += `*© ASURA MD - OFFICIAL*`;
-
-        await sock.sendMessage(from, { text: searchMsg }, { quoted: msg });
-        await sock.sendMessage(from, { react: { text: "✅", key: msg.key } });
-
     } catch (error) {
-        console.error('Search Error:', error);
-        await sock.sendMessage(from, { text: "❌ Search failed! Try a different topic." });
+        console.error(' Error:', error.message);
+        
+        // പരാജയപ്പെട്ടാൽ അടുത്ത കീ പരീക്ഷിക്കാൻ ഉപയോക്താവിനോട് ആവശ്യപ്പെടുകയോ അല്ലെങ്കിൽ ഓട്ടോമാറ്റിക് ആയി അറിയിക്കുകയോ ചെയ്യാം
+        await sock.sendMessage(from, { 
+            text: "⚠️ *System Busy:* Could not get response from AI. Please try again in a moment." 
+        }, { quoted: msg });
+        
+        await sock.sendMessage(from, { react: { text: "❌", key: msg.key } });
     }
 };

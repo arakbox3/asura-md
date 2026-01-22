@@ -60,8 +60,9 @@ export default async (sock, msg, args) => {
 ⊙🔥 *PLAYER:* @${sender.split('@')[0]}
 ┗━━━━━━━━━━━━━━━━━━━┛
 
-> 📢 *Join Now:* https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
-> *©👺 ASURA MD*`;
+© 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
+𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ
+> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
 
         // --- SENDING PROCESS ---
         const messageOptions = {

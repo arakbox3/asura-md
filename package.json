@@ -20,6 +20,7 @@
     "node-fetch": "latest",
     "g-i-s": "latest",  
     "google-tts-api": "latest",
+    "wikipedia": "latest",
     "wa-sticker-formatter": "latest",
     "qrcode-terminal": "latest",
     "yt-search": "latest"

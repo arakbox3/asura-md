@@ -1,65 +1,45 @@
-import axios from 'axios';
-import fetch from 'node-fetch';
+import gis from 'g-it-s'; 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const query = args.join(' ');
-    const command = msg.body ? msg.body.split(' ')[0].toLowerCase() : '';
 
-    // ഇൻപുട്ട് ഇല്ലെങ്കിൽ മറുപടി നൽകുന്നു
-    if (!query) {
-        return await sock.sendMessage(chat, { 
-            text: `*ASURA MD SEARCH ENGINE*\n\nExample: \`\`\`.Search write a kutty story\`\`\``
-        }, { quoted: msg });
-    }
+    if (!query) return sock.sendMessage(chat, { text: "🔍 .search who's cr7" }, { quoted: msg });
 
     try {
         // റിക്ഷൻ നൽകുന്നു
-        await sock.sendMessage(chat, { react: { text: '🤖', key: msg.key } });
+        await sock.sendMessage(chat, { react: { text: '🔍', key: msg.key } });
 
-        if (command === '.gpt') {
-            // GPT API സെക്ഷൻ
-            const response = await axios.get(`https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`);
-            
-            if (response.data && response.data.result) {
-                const answer = response.data.result;
-                await sock.sendMessage(chat, { text: `*ASURA MD RESPONSE:*\n\n${answer}` }, { quoted: msg });
-            } else {
-                throw new Error('GPT API Error');
+        // g-i-s സെർച്ച് ആരംഭിക്കുന്നു
+        gis(query, async (error, results) => {
+            if (error || !results || results.length === 0) {
+                return sock.sendMessage(chat, { text: "❌ ഫലങ്ങളൊന്നും ലഭിച്ചില്ല!" });
             }
 
-        } else if (command === '.gemini') {
-            // Gemini API സെക്ഷൻ (Multi-API fallback system)
-            const apis = [
-                `https://vapis.my.id/api/gemini?q=${encodeURIComponent(query)}`,
-                `https://api.siputzx.my.id/api/ai/gemini-pro?content=${encodeURIComponent(query)}`,
-                `https://api.ryzendesu.vip/api/ai/gemini?text=${encodeURIComponent(query)}`,
-                `https://api.giftedtech.my.id/api/ai/geminiai?apikey=gifted&q=${encodeURIComponent(query)}`
-            ];
+            // ആദ്യത്തെ ചിത്രം എടുക്കുന്നു
+            const firstImage = results[0].url;
 
-            let success = false;
-            for (const api of apis) {
-                try {
-                    const response = await fetch(api);
-                    const data = await response.json();
-                    const result = data.message || data.data || data.answer || data.result;
+            // റിസൾട്ട് മെസ്സേജ് സ്റ്റൈലിഷ് ആയി നിർമ്മിക്കുന്നു
+            let searchMsg = `🌟 *ASURA MD GOOGLE SEARCH* 🌟\n\n`;
+            searchMsg += `📝 *Query:* ${query}\n`;
+            searchMsg += `───────────────────\n\n`;
 
-                    if (result) {
-                        await sock.sendMessage(chat, { text: `*ASURA MD RESPONSE:*\n\n${result}` }, { quoted: msg });
-                        success = true;
-                        break; 
-                    }
-                } catch (e) {
-                    continue; 
-                }
-            }
+            // ആദ്യ 5 റിസൾട്ടുകളുടെ വിവരങ്ങൾ ചേർക്കുന്നു
+            results.slice(0, 5).forEach((res, index) => {
+                searchMsg += `🖼️ *Result ${index + 1}*\n`;
+                searchMsg += `🔗 ${res.url.slice(0, 50)}...\n\n`;
+            });
 
-            if (!success) throw new Error('All Gemini APIs failed');
-        }
+            searchMsg += `───────────────────\n*ASURA AI SYSTEM*`;
 
-    } catch (error) {
-        console.error('AI Error:', error);
-        await sock.sendMessage(chat, { 
-            text: "❌ *ASURA MD ERROR:*" 
-        }, { quoted: msg });
+            // ചിത്രം Caption സഹിതം അയക്കുന്നു (No Download)
+            await sock.sendMessage(chat, { 
+                image: { url: firstImage }, 
+                caption: searchMsg 
+            }, { quoted: msg });
+        });
+
+    } catch (e) {
+        console.error("GIS Search Error:", e);
+        await sock.sendMessage(chat, { text: "❌ തിരച്ചിലിനിടെ തടസ്സം നേരിട്ടു!" });
     }
 };

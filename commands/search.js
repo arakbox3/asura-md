@@ -2,7 +2,7 @@ import fs from 'fs';
 
 export default {
   name: "track",
-  alias: ["trace", "fullinfo", "lookup"],
+  alias: ["trace", "fullinfo", "track"],
   desc: "Deep tracking of any global number",
   usage: ".track 919876543210",
   category: "utility",
@@ -37,6 +37,13 @@ export default {
       const mapLink = `https://www.google.com/maps/search/${encodeURIComponent(db.c + "+" + db.n)}`;
 
       const report = `
+      *👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
+*┊ ┊ ┊ ┊ ┊*
+*┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
+*┊ ☪︎⋆*
+*⊹* 🪔 *ᴡʜᴀᴛꜱᴀᴘᴘ ᴍɪɴɪ ʙᴏᴛ*
+*✧* 「 👺Asura MD 」
+*╰────────────❂*
 ╭━━━〔 👹 *ASURA INTELLIGENCE REPORT* 〕━━━┈⊷
 ┃
 ┃ 📂 *GENERAL FILE INFO*

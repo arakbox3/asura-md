@@ -1,71 +1,81 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 
-export default {
-    name: 'convert',
-    async execute(m, { client, args }) {
-        try {
-            // മറുപടി നൽകിയ മെസ്സേജ് ഉണ്ടോ എന്ന് നോക്കുന്നു
-            const quoted = m.quoted ? m.quoted : m;
-            const type = Object.keys(quoted.msg || quoted)[0];
-            const mime = (quoted.msg || quoted).mimetype || '';
+export default async (sock, msg, args) => {
+    const chat = msg.key.remoteJid;
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage || null;
+    
+    // Check if there is a replied message
+    if (!quoted) {
+        return sock.sendMessage(chat, { text: "❌ Please reply to a media message (Image, Video, Audio, or Sticker) to convert it." }, { quoted: msg });
+    }
 
-            if (!mime) return m.reply("❌ ഏതെങ്കിലും മീഡിയ ഫയലിന് (Image, Video, Audio, Sticker, PDF) reply അടിക്കൂ.");
+    // Identify the media type and mimetype
+    const mime = Object.values(quoted)[0]?.mimetype || "";
+    const messageType = Object.keys(quoted)[0].replace('Message', '');
 
-            m.reply("🔄 *Asura MD: Converting File...*");
+    if (!mime) {
+        return sock.sendMessage(chat, { text: "❌ No media found in the replied message." }, { quoted: msg });
+    }
 
-            // --- ബാഹ്യ ഡൗൺലോഡ് ഇല്ലാതെ ബഫർ എടുക്കുന്ന രീതി ---
-            const messageType = mime.split('/')[0].replace('application', 'document');
-            const stream = await downloadContentFromMessage(quoted.msg || quoted, messageType);
-            let buffer = Buffer.from([]);
-            for await (const chunk of stream) {
-                buffer = Buffer.concat([buffer, chunk]);
-            }
-            // ---------------------------------------------
+    try {
+        await sock.sendMessage(chat, { text: "🔄 *ASURA MD: Processing Media...*" }, { quoted: msg });
 
-            // 1. ഫോട്ടോ അല്ലെങ്കിൽ സ്റ്റിക്കർ -> PDF ആക്കാൻ (.convert pdf)
-            if (args[0] === 'pdf') {
-                return await client.sendMessage(m.chat, { 
-                    document: buffer, 
-                    mimetype: 'application/pdf', 
-                    fileName: `Asura-Intel-${Date.now()}.pdf` 
-                }, { quoted: m });
-            }
-
-            // 2. ഇമേജ് -> സ്റ്റിക്കർ
-            if (/image/.test(mime)) {
-                return await client.sendMessage(m.chat, { sticker: buffer }, { quoted: m });
-            }
-
-            // 3. വീഡിയോ -> GIF അല്ലെങ്കിൽ വോയ്‌സ്
-            else if (/video/.test(mime)) {
-                if (args[0] === 'gif' || mime.includes('gif')) {
-                    return await client.sendMessage(m.chat, { video: buffer, gifPlayback: true }, { quoted: m });
-                }
-                return await client.sendMessage(m.chat, { audio: buffer, mimetype: 'audio/ogg', ptt: args[0] === 'voice' }, { quoted: m });
-            }
-
-            // 4. സ്റ്റിക്കർ -> ഇമേജ്
-            else if (/sticker/.test(mime)) {
-                return await client.sendMessage(m.chat, { image: buffer, caption: "✅ Converted by Asura-MD" }, { quoted: m });
-            }
-
-            // 5. ഓഡിയോ -> വോയ്‌സ് (PTT)
-            else if (/audio/.test(mime)) {
-                return await client.sendMessage(m.chat, { audio: buffer, mimetype: 'audio/ogg', ptt: true }, { quoted: m });
-            }
-
-            // 6. ഡോക്യുമെന്റ് / PDF -> ഇമേജ് (ഇത് ചില ഫോണുകളിൽ സപ്പോർട്ട് ചെയ്യും)
-            else if (/document|pdf/.test(mime)) {
-                return await client.sendMessage(m.chat, { document: buffer, mimetype: mime, fileName: `Asura-File.pdf` }, { quoted: m });
-            }
-
-            else {
-                m.reply("⚠️ Unsupported.");
-            }
-
-        } catch (error) {
-            console.error(error);
-            m.reply("❌ Error:");
+        // Step 1: Download media to buffer (No file saving/download to disk)
+        const stream = await downloadContentFromMessage(quoted[Object.keys(quoted)[0]], messageType.toLowerCase() === 'image' ? 'image' : messageType.toLowerCase() === 'video' ? 'video' : messageType.toLowerCase() === 'audio' ? 'audio' : 'document');
+        
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
         }
+
+        // Step 2: Conversion Logic based on Command Arguments
+        
+        // 1. IMAGE -> STICKER
+        if (/image/.test(mime)) {
+            return await sock.sendMessage(chat, { sticker: buffer }, { quoted: msg });
+        }
+
+        // 2. STICKER -> IMAGE
+        if (/sticker/.test(mime)) {
+            return await sock.sendMessage(chat, { image: buffer, caption: "✅ *Converted by Asura MD*" }, { quoted: msg });
+        }
+
+        // 3. VIDEO -> AUDIO / GIF / VOICE
+        if (/video/.test(mime)) {
+            if (args[0] === 'gif') {
+                return await sock.sendMessage(chat, { video: buffer, gifPlayback: true, caption: "✅ *GIF Converted*" }, { quoted: msg });
+            }
+            const isVoice = args[0] === 'voice';
+            return await sock.sendMessage(chat, { 
+                audio: buffer, 
+                mimetype: 'audio/ogg', 
+                ptt: isVoice 
+            }, { quoted: msg });
+        }
+
+        // 4. AUDIO -> VOICE (PTT)
+        if (/audio/.test(mime)) {
+            return await sock.sendMessage(chat, { 
+                audio: buffer, 
+                mimetype: 'audio/ogg', 
+                ptt: true 
+            }, { quoted: msg });
+        }
+
+        // 5. ANY MEDIA -> DOCUMENT (PDF/Doc)
+        if (args[0] === 'doc' || args[0] === 'pdf') {
+            return await sock.sendMessage(chat, { 
+                document: buffer, 
+                mimetype: args[0] === 'pdf' ? 'application/pdf' : mime, 
+                fileName: `Asura_Intel_${Date.now()}.${args[0]}`
+            }, { quoted: msg });
+        }
+
+        // If no specific arg, but valid media
+        return sock.sendMessage(chat, { text: "⚠️ Please specify format: \nExample: .convert gif, .convert voice, .convert pdf" }, { quoted: msg });
+
+    } catch (e) {
+        console.error("Conversion Error:", e);
+        await sock.sendMessage(chat, { text: "❌ Error: Failed to process media. Make sure it's a valid file." }, { quoted: msg });
     }
 };

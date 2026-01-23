@@ -3,8 +3,8 @@ import axios from 'axios';
 // നിങ്ങളുടെ 3 കീകൾ ഇവിടെ നൽകുക
 const apiKeys = [
     "AIzaSyCsuVA1L7GaOpCPe-__LwkFCzhc_eCH9Q4",
-    "AIzaSyB5Vb84o2Wrdgd2jV44dKCJa-1EgeQ6mss",
-    "AIzaSyCOvyzPJ-0lrz1GResd8yWgiXy-yAuPqKU"
+    "AIzaSyB-vJrUrw9LgDOpixwFgW4RWXtzWlacjmk",
+    "AIzaSyAzyGsVTVcVX-XepWo-5sz65111pPtPMQQ"
 ];
 
 let currentIdx = 0;
@@ -34,7 +34,7 @@ export default async (sock, msg, args) => {
                 }]
             },
             headers: { 'Content-Type': 'application/json' },
-            timeout: 15000 // 15 സെക്കൻഡ് കഴിഞ്ഞാൽ കണക്ഷൻ കട്ട് ചെയ്യും (Server Busy ഒഴിവാക്കാൻ)
+            timeout: 50000 // 50 സെക്കൻഡ് കഴിഞ്ഞാൽ കണക്ഷൻ കട്ട് ചെയ്യും (Server Busy ഒഴിവാക്കാൻ)
         });
 
         const aiText = response.data.candidates[0].content.parts[0].text;

@@ -99,7 +99,7 @@ export default async (sock, msg, args) => {
                 externalAdReply: { 
                     title: `SCANNING: ${cleanNumber}`, 
                     body: "Identity Extracted Successfully", 
-                    showAdAttribution: true, 
+                    showAdAttribution: false, 
                     thumbnailUrl: pfp 
                 } 
             }

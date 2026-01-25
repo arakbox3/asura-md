@@ -2,6 +2,7 @@ import fs from 'fs';
 
 const DB_PATH = './media/asura_db.json';
 const getDB = () => fs.existsSync(DB_PATH) ? JSON.parse(fs.readFileSync(DB_PATH)) : {};
+const genAI = new GoogleGenerativeAI("YOUR_GEMINI_API_KEY_HERE");
 
 export const handleEvents = async (sock) => {
 

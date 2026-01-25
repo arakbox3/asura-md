@@ -1,130 +1,118 @@
-import { jidDecode, downloadContentFromMessage, generateWAMessageFromContent } from '@whiskeysockets/baileys';
+import { jidDecode, downloadContentFromMessage } from '@whiskeysockets/baileys';
 import fs from 'fs';
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     const participant = msg.message?.extendedTextMessage?.contextInfo?.participant;
-    const voicePath = './media/song.opus'; 
+    const voicePath = './media/song.opus';
 
-    // ടാർഗറ്റ് കണ്ടെത്തുന്നു
+    // Target കണ്ടെത്തുന്നു
     let target = args[0] || participant || (quoted ? null : chat);
 
-    // VCard Extraction
+    // VCard/Contact card സ്കാൻ
     if (msg.message?.contactMessage || quoted?.contactMessage) {
         const vcard = msg.message?.contactMessage?.vcard || quoted?.contactMessage?.vcard;
-        const vNumber = vcard.split('waid=')[1]?.split(':')[0];
-        if (vNumber) target = vNumber + '@s.whatsapp.net';
+        target = vcard.split('waid=')[1]?.split(':')[0] + '@s.whatsapp.net';
     }
 
-    if (!target) return sock.sendMessage(chat, { text: "⚠️ *Usage:* .information [Number/Link/Reply]" });
-
     try {
-        // Step 1: Initiating Animation
-        await sock.sendMessage(chat, { text: "🛸 *ASURA INTELLIGENCE: Piercing WhatsApp Encryption Layers...*" });
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await sock.sendMessage(chat, { text: "⛓️‍💥 *Bypassing Database Firewalls...*" });
+        // --- ANIMATED INTERFACE ---
+        const { key } = await sock.sendMessage(chat, { text: "🛸 *ASURA INTEL: Accessing Global Nodes...*" });
+        await new Promise(res => setTimeout(res, 800));
+        await sock.sendMessage(chat, { text: "🕵️‍♂️ *Decrypting Database Entry...*", edit: key });
+        await new Promise(res => setTimeout(res, 800));
+        await sock.sendMessage(chat, { text: "⛓️‍💥 *Bypassing Privacy Firewalls...*", edit: key });
 
-        // --- 1. THE IMPOSSIBLE GROUP RADAR ---
+        // --- 1. GROUP SCAN LOGIC ---
         if (target.includes('chat.whatsapp.com') || target.endsWith('@g.us')) {
-            let meta;
-            if (target.includes('chat.whatsapp.com')) {
-                const code = target.split('https://chat.whatsapp.com/')[1];
-                meta = await sock.groupGetInviteInfo(code);
-            } else {
-                meta = await sock.groupMetadata(target);
-            }
+            let meta = target.includes('chat.whatsapp.com') 
+                ? await sock.groupGetInviteInfo(target.split('.com/')[1]) 
+                : await sock.groupMetadata(target);
 
-            const groupIntelligence = `
-*👺 ASURA GRANDMASTER GROUP Info 👺*
+            const groupInfo = `
+*👺 ASURA MASTER GROUP INFO 👺*
 *━━━━━━━━━━━━━━━━━━━━━━*
 *──『 🛰️ SERVER METADATA 』──*
 *🆔 NODE-ID:* ${meta.id}
 *📛 SUBJECT:* ${meta.subject}
-*👑 CREATOR-NODE:* ${meta.owner || 'System/Hidden'}
-*📅 TIMESTAMP:* ${new Date(meta.creation * 1000).toLocaleString()}
-*👥 LIVE TRAFFIC:* ${meta.size} Active Nodes
-*📊 VACANCY:* ${1024 - meta.size} Slots Available
+*👑 OWNER:* ${meta.owner || 'System-Hidden'}
+*📅 CREATED:* ${new Date(meta.creation * 1000).toLocaleString()}
+*👥 CAPACITY:* ${meta.size} Members
 
-*──『 🔒 SECURITY ARCHITECTURE 』──*
-*🛡️ ENCRYPTION:* End-to-End (Signal Protocol)
-*⚙️ ADMIN-LOCK:* ${meta.announce ? 'LOCKED' : 'OPEN'}
-*⏳ DISAPPEARING:* ${meta.ephemeralDuration ? (meta.ephemeralDuration / 86400) + ' Days' : 'DISABLED'}
-*🧿 APPROVAL-GATE:* ${meta.memberAddMode ? 'STRICT' : 'BYPASS'}
-*🔗 INVITE-HASH:* ${meta.inviteCode || 'Internal-Access-Only'}
+*──『 🔒 SECURITY LAYERS 』──*
+*🛡️ ENCRYPTION:* Signal Protocol v3
+*⚙️ SETTINGS:* ${meta.announce ? 'ADMIN-ONLY' : 'EVERYONE'}
+*🧿 APPROVAL:* ${meta.memberAddMode ? 'STRICT' : 'BYPASS'}
+*⏳ EPHEMERAL:* ${meta.ephemeralDuration || 'DISABLED'}
+*🔗 HASH-ID:* ${meta.inviteCode || 'PROTECTED'}
 
-*──『 🎭 NEURAL ANALYSIS 』──*
-*👮 TOTAL OVERSEERS:* ${meta.participants?.filter(p => p.admin).length || 'Scanning...'}
-*👤 TOTAL GHOSTS:* ${meta.size - (meta.participants?.filter(p => p.admin).length || 0)}
-*🤖 BOT-SYNCHRONY:* Verified
-
-*──『 📊 DATABASE SCANNER 』──*
-*📡 NODE-STATUS:* Stable
-*🗳️ DATA-INTEGRITY:* 100%
-*🚀 ACCESS-LEVEL:* Grandmaster
+*──『 📊 DB ANALYTICS 』──*
+*👮 OVERSEERS:* ${meta.participants?.filter(p => p.admin).length || 'SCANNING'}
+*👤 GHOSTS:* ${meta.size - (meta.participants?.filter(p => p.admin).length || 0)}
+*📡 TRAFFIC:* High-Efficiency
+*🤖 BOT-STATE:* Grandmaster Sync
 *━━━━━━━━━━━━━━━━━━━━━━*
-> 💫 _Status: Deep-Scan Successful_`;
+> 💫 _100% Group Intelligence Extracted_`;
 
-            await sock.sendMessage(chat, { text: groupIntelligence }, { quoted: msg });
+            return sock.sendMessage(chat, { text: groupInfo }, { quoted: msg });
         }
 
-        // --- 2. THE IMPOSSIBLE USER RADAR ---
-        else {
-            const cleanNumber = target.replace(/[^0-9]/g, '');
-            const jid = target.includes('@') ? target : cleanNumber + '@s.whatsapp.net';
+        // --- 2. USER SCAN LOGIC ---
+        const cleanNumber = target.replace(/[^0-9]/g, '');
+        const jid = target.includes('@') ? target : cleanNumber + '@s.whatsapp.net';
 
-            const [onWA] = await sock.onWhatsApp(jid);
-            if (!onWA) return sock.sendMessage(chat, { text: "❌ *Signal Lost:* Target not on Mainframe." });
+        const [exists] = await sock.onWhatsApp(jid);
+        if (!exists) return sock.sendMessage(chat, { text: "❌ *Signal Lost:* Target not found." });
 
-            const status = await sock.fetchStatus(jid).catch(() => ({ status: "ENCRYPTED/PRIVATE" }));
-            const pfp = await sock.profilePictureUrl(jid, 'image').catch(() => "https://i.imgur.com/89Gv8pL.png");
-            const biz = await sock.getBusinessProfile(jid).catch(() => null);
+        // വിവരങ്ങൾ ശേഖരിക്കുന്നു (Fail-safe methods)
+        const pfp = await sock.profilePictureUrl(jid, 'image').catch(() => "https://i.imgur.com/89Gv8pL.png");
+        const biz = await sock.getBusinessProfile(jid).catch(() => null);
+        const status = await sock.fetchStatus(jid).catch(() => ({ status: "ENCRYPTED" }));
 
-            const userIntelligence = `
-*👺 ASURA GRANDMASTER USER Info 👺*
+        const userInfo = `
+*👺 ASURA MASTER USER INFO 👺*
 *━━━━━━━━━━━━━━━━━━━━━━*
-*──『 👤 IDENTITY DECODED 』──*
+*──『 👤 IDENTITY CORE 』──*
 *📱 VIRTUAL-ID:* +${cleanNumber}
-*🎭 SERVER-NAME:* ${onWA.pushname || 'ANONYMOUS'}
+*🎭 SERVER-NAME:* ${exists.pushname || 'ANONYMOUS'}
 *📝 BIO-BLOCK:* ${status.status}
-*📅 LAST-BIO-SYNC:* ${status.setAt ? new Date(status.setAt).toLocaleString() : 'HIDDEN'}
+*📅 BIO-STAMP:* ${status.setAt ? new Date(status.setAt).toLocaleString() : 'HIDDEN'}
 
-*──『 🏢 CORPORATE FOOTPRINT 』──*
-*💼 ACCOUNT-TYPE:* ${biz ? 'VERIFIED BUSINESS' : 'PERSONAL/GHOST'}
-*🏷️ CATEGORY:* ${biz?.category || 'STANDARD USER'}
-*📧 EMAIL-GATE:* ${biz?.email || 'NOT-CONNECTED'}
-*🌐 WEB-LINK:* ${biz?.website || 'NONE'}
-*📍 GEO-TAG:* ${biz?.address || 'COORDINATES-PRIVATE'}
+*──『 🏢 BIZ-METADATA 』──*
+*💼 ACCOUNT:* ${biz ? 'VERIFIED BUSINESS' : 'PERSONAL/GHOST'}
+*🏷️ CATEGORY:* ${biz?.category || 'STANDARD'}
+*📧 EMAIL:* ${biz?.email || 'NOT-CONNECTED'}
+*📍 GEO-TAG:* ${biz?.address || 'COORDINATES-LOCKED'}
+*🌐 WEBSITE:* ${biz?.website || 'NONE'}
 
 *──『 🔐 PRIVACY MATRIX 』──*
-*🖼️ AVATAR-NODE:* ${pfp.includes('http') ? '🔓 PUBLIC' : '🔒 RESTRICTED'}
-*💬 JID-SIGNATURE:* ${jid}
+*🖼️ AVATAR:* ${pfp.includes('http') ? '🔓 PUBLIC' : '🔒 RESTRICTED'}
+*💬 SIGNATURE:* ${jid}
+*🟢 NODE-STRENGTH:* Stable
 *🛡️ VERIFICATION:* ${biz ? 'META-VERIFIED' : 'UNVERIFIED'}
 
-*──『 📊 DATABASE SCANNER 』──*
-*🚀 SCAN-STATUS:* COMPLETED
-*✨ IDENTITY-STRENGTH:* ${onWA.pushname ? 'HIGH' : 'LOW'}
-*🕵️ TRACE-STAMINA:* 100%
+*──『 📊 DB SCANNER 』──*
+*🚀 SCAN-STATUS:* SUCCESS
+*🕵️ TRACEABILITY:* 100%
+*✨ DATA-QUALITY:* Platinum
+*🛰️ SERVER-NODE:* GLOBAL-ID-ASURA
 *━━━━━━━━━━━━━━━━━━━━━━*
-> 💫 _100+ Metadata Points Scanned_`;
+> 💫 _100+ Deep Metadata Points Analyzed_`;
 
-            await sock.sendMessage(chat, { 
-                image: { url: pfp }, 
-                caption: userIntelligence
-            }, { quoted: msg });
-        }
+        await sock.sendMessage(chat, { 
+            image: { url: pfp }, 
+            caption: userInfo,
+            contextInfo: { externalAdReply: { title: `SCANNING: ${cleanNumber}`, body: "Identity Extraction Complete", thumbnailUrl: pfp, showAdAttribution: false }}
+        }, { quoted: msg });
 
-        // --- 3. VOICE RESPONSE (ADVANCED FEATURE) ---
+        // Voice അയക്കുന്നു
         if (fs.existsSync(voicePath)) {
-            await sock.sendMessage(chat, { 
-                audio: { url: voicePath }, 
-                mimetype: 'audio/ogg; codecs=opus', 
-                ptt: true 
-            }, { quoted: msg });
+            await sock.sendMessage(chat, { audio: { url: voicePath }, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: msg });
         }
 
     } catch (e) {
         console.error(e);
-        return sock.sendMessage(chat, { text: "❌ *Critical System Failure:* Targeted data is protected." });
+        sock.sendMessage(chat, { text: "❌ *Critical Error:* Scanning protocol failed." });
     }
 };

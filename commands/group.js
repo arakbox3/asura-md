@@ -1,19 +1,18 @@
 import fs from 'fs';
 
-// Database simulation to store settings locally
 const DB_PATH = './media/asura_db.json';
 const getDB = () => fs.existsSync(DB_PATH) ? JSON.parse(fs.readFileSync(DB_PATH)) : {};
 const saveDB = (data) => fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
-    const isGroup = chat.endsWith('@g.us');
-    const imagePath = './media/thumb.jpg';
     const songPath = './media/song.opus';
+    const thumbPath = './media/thumb.jpg';
 
     // --- 1. Help Menu Design ---
     if (!args[0] || args[0].toLowerCase() === 'help') {
-        const helpText = `*👺⃝⃘̉̉̉━━━━━━━━━━━◆◆◆*
+        const helpText = `
+*👺⃝⃘̉̉̉━━━━━━━━━━━◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
@@ -42,43 +41,43 @@ export default async (sock, msg, args) => {
 ┃🔹🌏 .group antiforeign on/off
 ┃🔹📞 .group anticall on/off
 ┃🔹🤖 .group chatbot on/off
-┃
-┃💡 *Note:* DM-ൽ JID വെച്ചും ഉപയോഗിക്കാം
+┃💡 .Help
 ╚━━━━━━━⛥❖⛥━━━━━━❥❥❥`;
+
+        // ഇമേജ് ഉണ്ടെങ്കിൽ ഇമേജ് സഹിതം മെനു അയക്കും
+        const menuOptions = { caption: helpText, mentions: [msg.key.participant || chat] };
+        if (fs.existsSync(thumbPath)) {
+            menuOptions.image = fs.readFileSync(thumbPath);
+        } else {
+            menuOptions.text = helpText;
+        }
 
         if (fs.existsSync(songPath)) {
             await sock.sendMessage(chat, { audio: { url: songPath }, mimetype: "audio/ogg; codecs=opus", ptt: true });
         }
-        return sock.sendMessage(chat, { text: helpText }, { quoted: msg });
+        return sock.sendMessage(chat, menuOptions, { quoted: msg });
     }
 
     try {
-        // --- 2. Target & Action Logic (Fixed) ---
         let targetGroup = chat;
         let action;
         let valueStartIdx;
 
-        // ചെക്ക് ചെയ്യുന്നു: ആദ്യത്തെ വാക്ക് JID ആണോ? (.group 1203xxx@g.us add)
+        // Remote Group Control Check
         if (args[0].includes('@g.us')) {
             targetGroup = args[0];
             action = args[1]?.toLowerCase();
             valueStartIdx = 2;
         } else {
-            targetGroup = chat;
             action = args[0]?.toLowerCase();
             valueStartIdx = 1;
         }
 
-        if (!action) return;
-
         const value = args.slice(valueStartIdx).join(' ');
         const db = getDB();
-
-        // User target detection (Reply, Tag, or Number)
         const quoted = msg.message?.extendedTextMessage?.contextInfo;
         let user = quoted?.participant || quoted?.mentionedJid?.[0] || (args[valueStartIdx] ? args[valueStartIdx].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null);
 
-        // --- 3. Command Switch System ---
         switch (action) {
             case 'id':
                 return sock.sendMessage(chat, { text: `📍 *Chat ID:* ${targetGroup}` }, { quoted: msg });
@@ -92,26 +91,27 @@ export default async (sock, msg, args) => {
                 if (!db[targetGroup]) db[targetGroup] = {};
                 db[targetGroup][action] = (value === 'on');
                 saveDB(db);
-                return sock.sendMessage(chat, { text: `✅ *${action.toUpperCase()}* is now *${value.toUpperCase()}* for ${targetGroup}` });
+                return sock.sendMessage(chat, { text: `✅ *${action.toUpperCase()}* is now *${value.toUpperCase()}*` });
 
             case 'anticall':
                 if (!db['global']) db['global'] = {};
                 db['global'].anticall = (value === 'on');
                 saveDB(db);
-                return sock.sendMessage(chat, { text: `🛡️ *ANTI-CALL* is now *${value.toUpperCase()}* (Global Setting)` });
+                return sock.sendMessage(chat, { text: `🛡️ *ANTI-CALL* is now *${value.toUpperCase()}* (Global)` });
 
             case 'tagall':
                 const metadata = await sock.groupMetadata(targetGroup);
-                const participants = metadata.participants.map(p => p.id);
-                return sock.sendMessage(targetGroup, { text: `📢 *${value || 'Attention everyone!'}*`, mentions: participants });
+                let message = `*📢 Group Announcement*\n\n*Message:* ${value || 'No Message'}\n\n`;
+                for (let mem of metadata.participants) {
+                    message += `┣ @${mem.id.split('@')[0]}\n`;
+                }
+                return sock.sendMessage(targetGroup, { text: message, mentions: metadata.participants.map(a => a.id) });
 
             case 'add':
-                if (!user) return sock.sendMessage(chat, { text: "❌ Please provide a number or reply to a user." });
                 await sock.groupParticipantsUpdate(targetGroup, [user], "add");
                 break;
 
             case 'kick':
-                if (!user) return sock.sendMessage(chat, { text: "❌ Please tag or reply to a user." });
                 await sock.groupParticipantsUpdate(targetGroup, [user], "remove");
                 break;
 
@@ -132,45 +132,32 @@ export default async (sock, msg, args) => {
                 break;
 
             case 'delete':
-                if (!quoted) return sock.sendMessage(chat, { text: "❌ Please reply to the message you want to delete." });
+                if (!quoted) return sock.sendMessage(chat, { text: "❌ Reply to a message to delete it." });
                 await sock.sendMessage(targetGroup, { delete: { remoteJid: targetGroup, fromMe: false, id: quoted.stanzaId, participant: quoted.participant } });
                 break;
 
             case 'name':
-                if (!value) return sock.sendMessage(chat, { text: "❌ Please provide a name." });
                 await sock.groupUpdateSubject(targetGroup, value);
                 break;
 
             case 'bio':
-                if (!value) return sock.sendMessage(chat, { text: "❌ Please provide a bio." });
                 await sock.groupUpdateDescription(targetGroup, value);
                 break;
 
-            case 'schedule':
-                const schedTime = parseInt(args[valueStartIdx]);
-                const schedMsg = args.slice(valueStartIdx + 1).join(' ');
-                if (isNaN(schedTime) || !schedMsg) return sock.sendMessage(chat, { text: "❌ Format: .group schedule [mins] [message]" });
-                sock.sendMessage(chat, { text: `🕒 Message scheduled in ${schedTime} minute(s).` });
-                setTimeout(() => {
-                    sock.sendMessage(targetGroup, { text: schedMsg });
-                }, schedTime * 60000);
+            case 'join':
+                const code = value.split('chat.whatsapp.com/')[1];
+                if (!code) return sock.sendMessage(chat, { text: "❌ Invalid Link" });
+                await sock.groupAcceptInvite(code);
                 break;
 
-            case 'join':
-                const link = args[valueStartIdx];
-                if (!link || !link.includes('chat.whatsapp.com/')) return sock.sendMessage(chat, { text: "❌ Invalid link." });
-                const code = link.split('.com/')[1];
-                await sock.groupAcceptInvite(code);
-                return sock.sendMessage(chat, { text: "✅ Joined successfully!" });
-
             default:
-                return sock.sendMessage(chat, { text: "❌ Unknown command. Use *.group help* to see all commands." });
+                return sock.sendMessage(chat, { text: "❌ Invalid action. Use *.group help*" });
         }
 
         await sock.sendMessage(chat, { text: `✅ *Executed:* ${action.toUpperCase()}` });
 
     } catch (e) {
         console.error(e);
-        await sock.sendMessage(chat, { text: "❌ *Failed:* Check if I am an Admin or if the JID is correct." });
+        await sock.sendMessage(chat, { text: "❌ *Error:* Permisson denied or invalid input." });
     }
 };

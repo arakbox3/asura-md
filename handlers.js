@@ -22,7 +22,17 @@ export const handleEvents = async (sock) => {
             const db = getDB();
             const settings = db[chat] || {};
             const body = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-
+            // --- GLOBAL MODE CHECK (Private/Public) ---
+            const ownerNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+            const sender = msg.key.participant || msg.key.remoteJid;
+            const isOwner = sender === ownerNumber || msg.key.remoteJid === ownerNumber;
+            const db = getDB();
+            const botMode = db.botMode || 'public';
+ 
+            if (botMode === 'private' && !isOwner && body.startsWith('.')) {
+         return; 
+        }
+    
             // --- 1. ALL LINK DELETE 
             const linkPattern = /https?:\/\/\S+|www\.\S+|\b\w+\.(?:com|in|net|org|gov|edu|me|xyz|site|co|biz|info|io|ml|tk)\b/gi;
 

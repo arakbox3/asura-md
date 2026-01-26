@@ -14,7 +14,7 @@ let currentKeyIndex = 0;
 const getGenAIModel = () => {
     const genAI = new GoogleGenerativeAI(API_KEYS[currentKeyIndex]);
     return genAI.getGenerativeModel({ 
-        model: "gemini-pro",
+        model: "gemini-2.5-flash",
         systemInstruction: "You are Asura MD AI, a powerful WhatsApp assistant. Be helpful, concise, and use emojis like 👺."
     });
 };

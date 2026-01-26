@@ -20,7 +20,16 @@ export const handleEvents = async (sock) => {
         const db = getDB();
         const settings = db[chat] || {};
         const body = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+             
+        // --- MODE CHECK LOGIC ---
+        const ownerNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+        const isOwner = msg.key.participant === ownerNumber || msg.key.remoteJid === ownerNumber;
+        const botMode = db.botMode || 'public'; 
 
+        if (botMode === 'private' && !isOwner && body.startsWith('.')) {
+            return; 
+        }
+        
         // ANTILINK
         if (isGroup && settings.antilink && body.includes('chat.whatsapp.com')) {
             const metadata = await sock.groupMetadata(chat);

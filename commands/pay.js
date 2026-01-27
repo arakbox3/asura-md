@@ -13,8 +13,9 @@ export default async (sock, msg, args) => {
     try {
         await sock.sendMessage(from, { react: { text: "🏦", key: msg.key } });
 
-        const donateText = `*🏦 W-BANK OFFICIAL NOTIFICATION*
-        
+        const donateText = `
+*🏦 Whatsapp Bank OFFICIAL NOTIFICATION*
+
 *Transaction ID:* ${Math.floor(Math.random() * 1000000000)}
 *Status:* PENDING REQUEST
 

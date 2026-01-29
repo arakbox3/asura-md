@@ -59,9 +59,13 @@ export default async (sock, msg, args) => {
 *╰─────────────────❂*
 ╭•°•❲ *Downloading...* ❳•°•
  ⊙🎬 *TITLE:* ${title}
+╰━━━━━━━━━━━━━━┈⊷
  ⊙📺 *CHANNEL:* ${channel}
+╰━━━━━━━━━━━━━━┈⊷
  ⊙👀 *VIEWS:* ${views}
+╰━━━━━━━━━━━━━━┈⊷
  ⊙⏳ *AGO:* ${date}
+╰━━━━━━━━━━━━━━┈⊷
 *◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24

@@ -10,20 +10,20 @@ export default async (sock, msg, args) => {
 *┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
 *┊ ☪︎⋆*
 *⊹* 🪔 *ᴀꜱᴜʀᴀ ᴍᴅ ᴅᴇᴠᴇʟᴏᴘᴇʀ*
-*✧* 「 👺Asura MD 」
+*✧* 「 👺Asᴜʀᴀ MD 」
 *╰─────────────❂*
 ╔━━━━━━━━━━━━━❥❥❥
-┃ *👑 Name:* arun•°Cumar
+┃ *👑 Nᴀᴍᴇ:* ᴀʀᴜɴ•°Cᴜᴍᴀʀ
 ╰━━━━━━━━━━━━━━┈⊷
-┃ *🚀 Role:* Main Developer
+┃ *🚀 Rᴏʟᴇ:* Mᴀɪɴ Dᴇᴠᴇʟᴏᴘᴇʀ
 ╰━━━━━━━━━━━━━━┈⊷
-┃ *📍 Location:* Kerala, India
+┃ *📍 Lᴏᴄᴀᴛɪᴏɴ:* Kᴇʀᴀʟᴀ, Iɴᴅɪᴀ
 ╰━━━━━━━━━━━━━━┈⊷
-┃ *🧬 Bio:* Innovation through Code!
+┃ *🧬 Bɪᴏ:* Iɴɴᴏᴠᴀᴛɪᴏɴ ᴛʜʀᴏᴜɢʜ Cᴏᴅᴇ!
 ╠━━━━━━━━━━━━━❥❥❥
-┃ *⚡ Status:* Online & Active
+┃ *⚡ Sᴛᴀᴛᴜs:* Oɴʟɪɴᴇ & Aᴄᴛɪᴠᴇ
 ╚━━━━━⛥❖⛥━━━━━❥❥❥
-> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*
+> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asᴜʀᴀ MD*
 > 📢 Join: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24`;
 
     // 2. V-Card Contact Details

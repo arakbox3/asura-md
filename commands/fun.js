@@ -20,7 +20,7 @@ export default async (sock, msg, args) => {
             { p: "60%", m: "🤡 Level 6: Clown Energy detected at maximum!" },
             { p: "70%", m: "🛸 Calling Aliens to take you back home..." },
             { p: "80%", m: "🧼 Washing your dirty thoughts... Please wait." },
-            { p: "90%", m: "🔥 Preparing the final roast for @${pushName}..." },
+            { p: "90%", m: "🔥 Preparing the final roast for ${pushName}..." },
             { p: "100%", m: "👺 SCAN COMPLETE: YOU ARE A CERTIFIED LEGENDARY IDIOT!" }
         ];
 
@@ -49,14 +49,14 @@ export default async (sock, msg, args) => {
 ╰╌╌╌╌╌╌╌╌╌╌࿐
 ╔━━━━━━━━━━━❥❥❥
 ┃👺 *Roast Activated for:* ${pushName}
-┃
-┃⁣🤣 If stupidity was a job, you'd be a CEO!
-╰━━━━━━━━━━━━━━┈⊷
-┃🚶‍♂️ Your brain is like Internet Explorer.
-╰━━━━━━━━━━━━━━┈⊷
-┃📦 Even Google can't find your logic.
-╰━━━━━━━━━━━━━━┈⊷
-┃💀 You are the reason shampoo has instructions.
+┃••••••••••••••••••••
+┃⁣⊙ 🤣 If stupidity was a job, you'd be a CEO!
+╰━━━━━━━━━━━┈⊷
+┃⊙ 🚶‍♂️ Your brain is like Internet Explorer.
+╰━━━━━━━━━━━┈⊷
+┃⊙ 📦 Even Google can't find your logic.
+╰━━━━━━━━━━━┈⊷
+┃⊙ 💀 You are the reason shampoo has instructions.
 ╚━━━━⛥❖⛥━━━━❥❥❥
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇ BY 👺Asura MD*`;
@@ -78,7 +78,7 @@ export default async (sock, msg, args) => {
         if (fs.existsSync(songPath)) {
             await sock.sendMessage(chat, { 
                 audio: { url: songPath }, 
-                mimetype: 'audio/mpeg', 
+                mimetype: 'audio/ogg', 
                 ptt: true 
             }, { quoted: msg });
         }

@@ -96,7 +96,7 @@ async function startAsura() {
             const commandName = args.shift().toLowerCase();
             
             if (!commandName) {
-                await sock.sendMessage(msg.key.remoteJid, { text: "👺 *Asura MD:* Please Enter A Command After The Prefix (Eg: .menu)🥰" });
+                await sock.sendMessage(msg.key.remoteJid, { text: "👺 *Asura-MD:* Please Enter A Command After The Prefix (Eg: .menu)🥰" });
                 return;
             }
             
@@ -123,6 +123,7 @@ async function startAsura() {
             console.error("\x1b[31m[ERROR]\x1b[0m", err);
         }
     });
+}
 
 startAsura();
 

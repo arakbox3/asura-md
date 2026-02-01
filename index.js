@@ -93,7 +93,7 @@ async function startAsura() {
                          (mtype === 'videoMessage') ? msg.message.videoMessage.caption : '';
             
             // --- PREFIX CHECK ---
-                const = prefixRegex = /^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~₹£€÷×+`]/;
+                const prefixRegex = /^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~₹£€÷×+`]/;
                 const isCmd = prefixRegex.test(body);
                 if (!isCmd) return;
 

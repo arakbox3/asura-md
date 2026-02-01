@@ -59,16 +59,42 @@ async function startAsura() {
 
     // --- 4. CONNECTION HANDLER ---
         sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) startAsura();
-        } else if (connection === 'open') {
-            console.log('\x1b[36m✅ Asura MD Connected Successfully!\x1b[0m');
-            const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
-            await sock.sendMessage(myNumber, { text: "*Asura MD is Online on Whatsapp!* 👺\n\nAll commands are now active." });
+    const { connection, lastDisconnect } = update;
+
+    if (connection === 'close') {
+        // error check 
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const reason = lastDisconnect?.error?.output?.payload?.message || "Unknown Reason";
+        
+        console.log(`❌ Connection Closed: ${reason} (Code: ${statusCode})`);
+    
+        const shouldReconnect = statusCode !== 401;
+
+        if (shouldReconnect) {
+            console.log("♻️ Attempting to Reconnect Asura MD...");
+            setTimeout(() => startAsura(), 5000); 
+        } else {
+            console.log("⚠️ Logged out. Please scan the QR code again.");
         }
-    });
+
+    } else if (connection === 'open') {
+        console.log('\x1b[36m✅ Asura MD Connected Successfully!\x1b[0m');
+        
+        const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+        
+        const statusMsg = `
+*👺 ASURA MD IS ONLINE*
+⊙━━━━━━━━━━━━━━⊙
+*Status:* ✅ Connected
+*Mode:* Public
+*Prefix:* [ .,!?&$#@ ]
+*developer:* arun.Cumar 
+⊙━━━━━━━━━━━━━━⊙
+_The bot is ready to use!_`;
+
+        await sock.sendMessage(myNumber, { text: statusMsg });
+    }
+});
 
         // --- 5. MESSAGE & COMMAND HANDLER ---
     sock.ev.on('messages.upsert', async (chatUpdate) => {

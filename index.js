@@ -58,30 +58,17 @@ async function startAsura() {
     sock.ev.on('creds.update', saveCreds);
 
     // --- 4. CONNECTION HANDLER ---
-    sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect } = update;
-    
-    if (connection === 'close') {
-        const reason = lastDisconnect?.error?.output?.statusCode;
-        console.log(`❌ Connection closed. Reason: ${reason}`);
-        
-        if (reason === 440) {
-            console.log("⚠️ Conflict detected. Retrying in 10s...");
-            setTimeout(() => startAsura(), 10000);
-        } 
-        // restart
-        else if (reason !== DisconnectReason.loggedOut) {
-            console.log("🔄 Reconnecting...");
-            startAsura();
-        } else {
-            console.log("🚫 Session Expired. Please Link Again.");
+        sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) startAsura();
+        } else if (connection === 'open') {
+            console.log('\x1b[36m✅ Asura MD Connected Successfully!\x1b[0m');
+            const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+            await sock.sendMessage(myNumber, { text: "*Asura MD is Online on Whatsapp!* 👺\n\nAll commands are now active." });
         }
-    } else if (connection === 'open') {
-        console.log('\x1b[36m✅ Asura MD Connected!\x1b[0m');
-        const myId = sock.user.id.split(':')[0] + "@s.whatsapp.net";
-        await sock.sendMessage(myId, { text: "👺 *ASURA-MD is Online!*" });
-    }
-});
+    });
 
     // --- 5. MESSAGE & COMMAND HANDLER ---
     sock.ev.on('messages.upsert', async (chatUpdate) => {

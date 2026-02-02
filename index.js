@@ -102,52 +102,81 @@ _The bot is ready to use!_`;
 
         // --- 5. MESSAGE & COMMAND HANDLER ---
     sock.ev.on('messages.upsert', async (chatUpdate) => {
-        try {
-            if (chatUpdate.type !== 'notify') return;
-            const msg = chatUpdate.messages[0];
-            if (!msg.message || msg.key.fromMe) return;
+    try {
+        // Support both notify and append to avoid missed messages on Render
+        if (!['notify', 'append'].includes(chatUpdate.type)) return;
 
-            const mtype = Object.keys(msg.message)[0];
-            let body = (mtype === 'conversation') ? msg.message.conversation :
-                       (mtype === 'extendedTextMessage') ? msg.message.extendedTextMessage.text :
-                       (mtype === 'imageMessage') ? msg.message.imageMessage.caption :
-                       (mtype === 'videoMessage') ? msg.message.videoMessage.caption : '';
-            
-            if (!body) return;
+        const msg = chatUpdate.messages[0];
+        if (!msg.message || msg.key.fromMe) return;
 
-            // --- PREFIX CHECK (Fixed Logic) ---
-            const prefixes = "!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~₹£€÷×+`";
-            const firstChar = body.charAt(0);
-            const isCmd = prefixes.includes(firstChar);
+        // Ensure we handle messages from Groups, Private DMs, and Broadcasts
+        const from = msg.key.remoteJid;
+        const isGroup = from.endsWith('@g.us');
+        
+        // Extract message body across all media types
+        const mtype = Object.keys(msg.message)[0];
 
-            if (!isCmd) return;
+        let body = (mtype === 'conversation') ? msg.message.conversation :
+           (mtype === 'extendedTextMessage') ? msg.message.extendedTextMessage.text :
+           (mtype === 'imageMessage') ? msg.message.imageMessage.caption :
+           (mtype === 'videoMessage') ? msg.message.videoMessage.caption :
+           (mtype === 'documentMessage') ? msg.message.documentMessage.caption :
+           (mtype === 'pollUpdateMessage') ? msg.message.pollUpdateMessage.pollUpdate.vote.selectedOptions[0] : 
+           (mtype === 'templateButtonReplyMessage') ? msg.message.templateButtonReplyMessage.selectedId :
+           (mtype === 'interactiveResponseMessage') ? JSON.parse(msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson).id :
+           (mtype === 'buttonsResponseMessage') ? msg.message.buttonsResponseMessage.selectedButtonId :
+           (mtype === 'listResponseMessage') ? msg.message.listResponseMessage.singleSelectReply.selectedRowId :
+           (msg.message.viewOnceMessageV2) ? msg.message.viewOnceMessageV2.message.imageMessage?.caption || msg.message.viewOnceMessageV2.message.videoMessage?.caption : '';
 
-            const prefix = firstChar;
-            const args = body.slice(prefix.length).trim().split(/ +/);
-            const commandName = args.shift().toLowerCase();
-            
-            if (!commandName) {
-                await sock.sendMessage(msg.key.remoteJid, { text: "👺 *Asura-MD:* Please Enter A Command After The Prefix (Eg: .menu)🥰" });
-                return;
-            }
-            
-            // Command Execution
-            const commandPath = path.join(process.cwd(), 'commands', `${commandName}.js`);
+           // (Quoted/Reply Message)
+         if (!body && mtype === 'extendedTextMessage' && msg.message.extendedTextMessage.contextInfo) {
+           body = msg.message.extendedTextMessage.text;
+           }
 
-            if (fs.existsSync(commandPath)) {
+         if (!body) return; 
+
+        // Define allowed prefixes
+        const prefixes = ".!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~₹";
+        const firstChar = body.charAt(0);
+        const isCmd = prefixes.includes(firstChar);
+
+        if (!isCmd) return;
+
+        const prefix = firstChar;
+        const args = body.slice(prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+        
+        if (!commandName) {
+            await sock.sendMessage(from, { text: "👺 *Asura-MD:* Please enter a command after the prefix (e.g., .menu) 🥰" }, { quoted: msg });
+            return;
+        }
+
+        // Command File Execution
+        const commandPath = path.join(process.cwd(), 'commands', `${commandName}.js`);
+
+        if (fs.existsSync(commandPath)) {
+            try {
                 
-                const fileUrl = pathToFileURL(commandPath).href + `?update=${Date.now()}`;
+                const fileUrl = `${pathToFileURL(commandPath).href}?t=${Date.now()}`;
                 const commandModule = await import(fileUrl);
-                const runCommand = commandModule.default;
+                const runCommand = commandModule.default || commandModule;
 
                 if (typeof runCommand === 'function') {
+                    console.log(`\x1b[36m[EXEC]\x1b[0m ${commandName} in ${isGroup ? 'Group' : 'DM'}`);
                     await runCommand(sock, msg, args);
                 }
+            } catch (err) {
+                console.error(`\x1b[31m[COMMAND ERROR]\x1b[0m Error in ${commandName}:`, err);
+                await sock.sendMessage(from, { text: `❌ Error executing *${commandName}*` }, { quoted: msg });
             }
-        } catch (err) {
-            console.error("Critical Error:", err);
+        } else {
+            console.log(`\x1b[33m[SKIP]\x1b[0m Unknown command: ${commandName}`);
         }
-    });
+
+    } catch (err) {
+        console.error("\x1b[31m[UPSERT ERROR]\x1b[0m", err);
+      }
+   });
 }
 
 startAsura();

@@ -151,26 +151,46 @@ _The bot is ready to use!_`;
             return;
         }
 
-        // Command File Execution
-        const commandPath = path.join(process.cwd(), 'commands', `${commandName}.js`);
+        // Command File Execution 
+        const commandFile = `${commandName.toLowerCase()}.js`;
+        const commandPath = path.join(process.cwd(), 'commands', commandFile);
 
         if (fs.existsSync(commandPath)) {
             try {
-                
+                // Import with Cache Busting to ensure updates take effect
                 const fileUrl = `${pathToFileURL(commandPath).href}?t=${Date.now()}`;
                 const commandModule = await import(fileUrl);
+                
+                // Flexible Export: handles 'export default' and 'module.exports'
                 const runCommand = commandModule.default || commandModule;
 
                 if (typeof runCommand === 'function') {
-                    console.log(`\x1b[36m[EXEC]\x1b[0m ${commandName} in ${isGroup ? 'Group' : 'DM'}`);
-                    await runCommand(sock, msg, args);
+                    console.log(`\x1b[1;32m[SUCCESS]\x1b[0m Executing ${commandName} for ${from}`);
+                    
+                    // Typing status to make it look professional
+                    await sock.sendPresenceUpdate('composing', from);
+
+                    // Execute with a Timeout (Prevent bot from hanging on slow commands)
+                    await Promise.race([
+                        runCommand(sock, msg, args),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 20000))
+                    ]);
+
+                } else {
+                    throw new Error("Command file does not export a valid function.");
                 }
+
             } catch (err) {
-                console.error(`\x1b[31m[COMMAND ERROR]\x1b[0m Error in ${commandName}:`, err);
-                await sock.sendMessage(from, { text: `❌ Error executing *${commandName}*` }, { quoted: msg });
+                console.error(`\x1b[1;31m[EXECUTION ERROR]\x1b[0m In ${commandName}:`, err.message);
+                
+                let errorMsg = "❌ *Asura-MD Error* ❌\n\n";
+                errorMsg += `*Command:* ${commandName}\n`;
+                errorMsg += `*Reason:* ${err.message === 'Timeout' ? 'Server Busy/Slow' : 'Internal Bug'}`;
+                
+                await sock.sendMessage(from, { text: errorMsg }, { quoted: msg });
             }
         } else {
-            console.log(`\x1b[33m[SKIP]\x1b[0m Unknown command: ${commandName}`);
+            console.log(`\x1b[1;33m[IGNORE]\x1b[0m Command not found: ${commandName}`);
         }
 
     } catch (err) {

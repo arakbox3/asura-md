@@ -42,17 +42,16 @@ async function startAsura() {
     console.log(`\x1b[33mConnecting with Baileys v${version.join('.')} (Latest: ${isLatest})\x1b[0m`);
 
     // --- 3. SOCKET INITIALIZATION ---
-    const sock = makeWASocket({
-        version,
-        auth: {
-            creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
-        },
-        printQRInTerminal: false,
-        logger: pino({ level: "silent" }),
-        browser: ["Asura-MD", "Safari", "3.0.0"]
-    });
-
+const sock = makeWASocket({
+    version,
+    auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
+    },
+    printQRInTerminal: false,
+    logger: pino({ level: "silent" }),
+    browser: ["Asura-MD", "Chrome", "20.0.04"] 
+});
     // Pairing logic for initial setup
         if (!sock.authState.creds.registered) {
         if (process.env.SESSION_ID) {

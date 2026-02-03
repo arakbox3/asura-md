@@ -94,16 +94,17 @@ async function startAsura() {
         const firstChar = body.charAt(0);
         const isCmd = prefixes.includes(firstChar);
 
-        if (!isCmd) return;
+                  if (isCmd && body.length === 1) {
+                  await sock.sendMessage(from, { 
+                  text: "👺 *Asura-MD:* Please enter a command after the prefix (e.g., .menu) 🥰" 
+                  }, { quoted: msg });
+               return;
+             }
+             const prefix = firstChar;
+             const args = body.slice(prefix.length).trim().split(/ +/);
+             const commandName = args.shift()?.toLowerCase();
 
-        const prefix = firstChar;
-        const args = body.slice(prefix.length).trim().split(/ +/);
-        const commandName = args.shift().toLowerCase();
-        
-        if (!commandName) {
-            await sock.sendMessage(from, { text: "👺 *Asura-MD:* Please enter a command after the prefix (e.g., .menu) 🥰" }, { quoted: msg });
-            return;
-        }
+             if (!commandName) return;
               // Command File Execution 
                 const commandFile = `${commandName.toLowerCase()}.js`;
                 const commandPath = path.join(process.cwd(), 'commands', commandFile);

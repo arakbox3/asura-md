@@ -71,7 +71,7 @@ async function startAsura() {
         } else if (connection === 'open') {
             console.log('\x1b[36m✅ Asura MD Connected Successfully!\x1b[0m');
             const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
-            await sock.sendMessage(myNumber, { text: "*Asura MD is Online!* 👺\n\nCommands are now active in Private and Groups." });
+            await sock.sendMessage(myNumber, { text: "*Asura MD is Online!* 👺\n\nCommands are now actived." });
         }
     });
 
@@ -80,16 +80,17 @@ async function startAsura() {
         try {
             const msg = chatUpdate.messages[0];
             if (!msg.message) return;
-
+            const from = msg.key.remoteJid;
             // Extract message body from various types (Text, Reply, Image/Video Caption)
-            const mtype = Object.keys(msg.message)[0];
-            const body = mtype === 'conversation' ? msg.message.conversation :
-                         mtype === 'extendedTextMessage' ? msg.message.extendedTextMessage.text :
-                         mtype === 'imageMessage' ? msg.message.imageMessage.caption :
-                         mtype === 'videoMessage' ? msg.message.videoMessage.caption : '';
+             const mtype = Object.keys(msg.message)[0];
+             const body = msg.message.conversation || 
+             msg.message.extendedTextMessage?.text || 
+             msg.message.imageMessage?.caption || 
+             msg.message.videoMessage?.caption || '';
+
 
        // prefixes
-        const prefixes = ".!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~₹";
+        const prefixes = ".!@#$%^&*()_+-=[]{};':\"\\|,.<>/~₹";
         const firstChar = body.charAt(0);
         const isCmd = prefixes.includes(firstChar);
 

@@ -85,57 +85,72 @@ async function startAsura() {
 
     // --- 4. CONNECTION HANDLER ---
         sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+
+   
+    if (qr && !process.env.SESSION_ID) {
+        console.log("⚠️ Scan the QR code quickly or provide SESSION_ID.");
+    }
 
     if (connection === 'close') {
-        // error check 
         const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const reason = lastDisconnect?.error?.output?.payload?.message || "Unknown Reason";
+        const reason = lastDisconnect?.error?.output?.payload?.message || "Unknown";
         
-        console.log(`❌ Connection Closed: ${reason} (Code: ${statusCode})`);
-    
-        const shouldReconnect = statusCode !== 401;
+        console.log(`\x1b[31m❌ Connection Closed: ${reason} (Code: ${statusCode})\x1b[0m`);
+
+       
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
         if (shouldReconnect) {
-            console.log("♻️ Attempting to Reconnect Asura MD...");
-            setTimeout(() => startAsura(), 5000); 
+            const retryDelay = 5000;
+            console.log(`\x1b[33m♻️ Reconnecting in ${retryDelay/1000}s...\x1b[0m`);
+            setTimeout(() => startAsura(), retryDelay);
         } else {
-            console.log("⚠️ Logged out. Please scan the QR code again.");
+            console.log("\x1b[41m⚠️ Session Expired. Please Link Again.\x1b[0m");
+            
+            if (fs.existsSync(sessionPath)) {
+                fs.rmSync(sessionPath, { recursive: true, force: true });
+            }
+            process.exit(1);
         }
 
     } else if (connection === 'open') {
-        console.log('\x1b[36m✅ Asura MD Connected Successfully!\x1b[0m');        
- 
-        // --- AUTO JOIN LOGIC ---
-    try {
-        const channelId = "0029VbB59W9GehENxhoI5l24@newsletter"; 
-        await sock.newsletterFollow(channelId);
-    } catch (e) {
-        
-    }
+        console.log('\x1b[1;32m✅ ASURA MD CONNECTED SUCCESSFULLY!\x1b[0m');
 
-    try {
-        const groupCode = "JqxtYghmFfR9KGqEwMEa30"; 
-        await sock.groupAcceptInvite(groupCode);
-    } catch (e) {
-        
-    }
+        // Channel & Group Auto Join 
+        try {
+            await sock.newsletterFollow("0029VbB59W9GehENxhoI5l24@newsletter");
+            await sock.groupAcceptInvite("JqxtYghmFfR9KGqEwMEa30");
+        } catch (e) { /* ignore errors */ }
 
         const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
-        
-        const statusMsg = `
-*👺 ASURA MD IS ONLINE*
-⊙━━━━━━━━━━━━━━⊙
-*Status:* ✅ Connected
-*Mode:* Public
-*Prefix:* [ .,!?&$#@ ]
-*developer:* arun.Cumar 
-⊙━━━━━━━━━━━━━━⊙
-_The bot is ready to use!_`;
+        const thumbPath = './media/thumb.jpg';
 
-        await sock.sendMessage(myNumber, { text: statusMsg });
+        // --- MODEL BOX DESIGN WITH THUMBNAIL ---
+        const statusMsg = {
+            image: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: 'https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24' },
+            caption: `
+╭━━━━〔 *👺 ASURA-MD* 〕━━━━╮
+┃ 🛠️ *STATUS:* Online
+┃ 👤 *OWNER:* arun.°Cumar
+┃ ⚙️ *MODE:* Public
+┃ 📌 *PREFIX:* [ .,!#$@ ]
+╰━━━━━━━━━━━━━━━━━━━━╯
+      *The Underworld is Active!* 👺`,
+            contextInfo: {
+                externalAdReply: {
+                    title: "ASURA MD WHATSAPP BOT",
+                    body: "System: Online 🟢",
+                    thumbnail: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null,
+                    sourceUrl: "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24",
+                    mediaType: 1,
+                    renderLargerThumbnail: true
+                }
+            }
+        };
+
+        await sock.sendMessage(myNumber, statusMsg);
     }
-            
 });
 
         // --- 5. MESSAGE & COMMAND HANDLER ---

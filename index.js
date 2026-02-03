@@ -7,43 +7,40 @@ import makeWASocket, {
 import pino from "pino";
 import fs from "fs";
 import path from "path";
+import { pathToFileURL } from 'url';
 import readline from "readline";
 import express from "express"; 
-// Modular Handlers
-import { handleConnection } from './connection/connection.js';
-import { handleMessages } from './message.js';
-
 const sessionPath = './session';
 const sessionData = process.env.SESSION_ID;
-
-// --- 1. SESSION ID MANAGEMENT ---
+//SESSION_ID MANAGE
 if (sessionData) {
     if (!fs.existsSync(sessionPath)) {
         fs.mkdirSync(sessionPath, { recursive: true });
     }
     const credsPath = path.join(sessionPath, 'creds.json');
-    if (!fs.existsSync(credsPath)) {
-        try {
-            fs.writeFileSync(credsPath, sessionData.trim());
-            console.log("✅ Session file updated from Environment Variable");
-        } catch (error) {
-            console.error("❌ Error restoring session:", error.message);
-        }
+    
+    try {
+        fs.writeFileSync(credsPath, sessionData.trim());
+        console.log("✅ Session file updated from Environment Variable");
+    } catch (error) {
+        console.error("❌ Error restoring session:", error.message);
     }
 }
 
-// --- 2. UPTIME SERVER ---
+// --- 2. UPTIME SERVER (For Render/Koyeb) ---
 const app = express();
 app.get('/', (req, res) => res.send('Asura MD is Alive! 👺'));
 app.listen(process.env.PORT || 3000);
 
-async function startAsura() {
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const { version, isLatest } = await fetchLatestBaileysVersion();
-    
-    console.log(`\x1b[33mConnecting with Baileys v${version.join('.')} (Latest: ${isLatest})\x1b[0m`);
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
-    // --- 3. SOCKET INITIALIZATION ---
+async function startAsura() {
+    // 1. Setup Auth State
+    const { state, saveCreds } = await useMultiFileAuthState('session');
+    const { version } = await fetchLatestBaileysVersion();
+
+    // 2. Initialize Socket
     const sock = makeWASocket({
         version,
         auth: {
@@ -52,72 +49,82 @@ async function startAsura() {
         },
         printQRInTerminal: false,
         logger: pino({ level: "silent" }),
-        browser: ["Asura-MD", "Chrome", "20.0.04"] 
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
-    // --- 4. CONNECTION & MESSAGE HANDLERS ---
-    // connection.js
-    await handleConnection(sock, startAsura, sessionPath);
-
-    // messages.js
-    sock.ev.on('messages.upsert', async (chatUpdate) => {
-        await handleMessages(sock, chatUpdate);
-    });
-
-    // --- 5. PAIRING LOGIC (For Local Setup) ---
+    // 3. Pairing Code Logic
     if (!sock.authState.creds.registered) {
-        if (process.env.RENDER || process.env.PORT) {
-            console.log("❌ Cloud environment detected. Add SESSION_ID to Env.");
-        } else {
-            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-            const question = (text) => new Promise((resolve) => rl.question(text, resolve));
-            const phoneNumber = await question('📞 Enter Phone Number with Country Code (Eg:91xxxxxxxxxx): ');
-            const code = await sock.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ''));
-            console.log(`\n\x1b[32mYOUR 🗝 PAIRING CODE: ${code}\x1b[0m\n`);
-            rl.close();
-        }
+        const phoneNumber = await question('\n📞Enter your Phone Number with Country Code (eg: 91xxxx): ');
+        const code = await sock.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ''));
+        console.log(`\x1b[32m\nYOUR 🗝 PAIRING CODE: \x1b[1m${code}\x1b[0m\n`);
     }
 
-    // Save credentials whenever they update
+    // Save credentials whenever they are updated
     sock.ev.on('creds.update', saveCreds);
 
-    // --- 6. ON CONNECTION OPEN TASKS ---
+    // 4. Connection Handler
     sock.ev.on('connection.update', async (update) => {
-        const { connection } = update;
-        if (connection === 'open') {
-            try {
-                // Channel & Group Auto Join 
-                await sock.newsletterFollow("0029VbB59W9GehENxhoI5l24@newsletter");
-                await sock.groupAcceptInvite("JqxtYghmFfR9KGqEwMEa30");
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) startAsura();
+        } else if (connection === 'open') {
+            console.log('\x1b[36m✅ Asura MD Connected Successfully!\x1b[0m');
+            const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+            await sock.sendMessage(myNumber, { text: "*Asura MD is Online!* 👺\n\nCommands are now active in Private and Groups." });
+        }
+    });
 
-                const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
-                const thumbPath = './media/thumb.jpg';
+    // 5. Message & Command Handler
+    sock.ev.on('messages.upsert', async (chatUpdate) => {
+        try {
+            const msg = chatUpdate.messages[0];
+            if (!msg.message) return;
 
-                const statusMsg = {
-                    image: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: 'https://i.imgur.com/your-image.jpg' },
-                    caption: `
-                    ╭━━━〔 *👺 ASURA-MD* 〕━╮
-                    ┃ 🛠️ *STATUS:* Online
-                    ┃ 👤 *OWNER:* arun.°Cumar
-                    ┃ ⚙️ *MODE:* Public
-                    ┃ 📌 *PREFIX:* [ .,!#$@ ]
-                    ╰━━━━━━━━━━━━━━━━━━━━╯
-                    *The Underworld is Active!* 👺`,
-                    contextInfo: {
-                        externalAdReply: {
-                            title: "ASURA MD WHATSAPP BOT",
-                            body: "System: Online 🟢",
-                            thumbnail: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null,
-                            sourceUrl: "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24",
-                            mediaType: 1,
-                            renderLargerThumbnail: true
-                        }
-                    }
-                };
-                await sock.sendMessage(myNumber, statusMsg);
-            } catch (e) { console.log("Init Message Error: ", e.message); }
+            // Extract message body from various types (Text, Reply, Image/Video Caption)
+            const mtype = Object.keys(msg.message)[0];
+            const body = mtype === 'conversation' ? msg.message.conversation :
+                         mtype === 'extendedTextMessage' ? msg.message.extendedTextMessage.text :
+                         mtype === 'imageMessage' ? msg.message.imageMessage.caption :
+                         mtype === 'videoMessage' ? msg.message.videoMessage.caption : '';
+
+       // prefixes
+        const prefixes = ".!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~₹";
+        const firstChar = body.charAt(0);
+        const isCmd = prefixes.includes(firstChar);
+
+        if (!isCmd) return;
+
+        const prefix = firstChar;
+        const args = body.slice(prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+        
+        if (!commandName) {
+            await sock.sendMessage(from, { text: "👺 *Asura-MD:* Please enter a command after the prefix (e.g., .menu) 🥰" }, { quoted: msg });
+            return;
+        }
+              // Command File Execution 
+                const commandFile = `${commandName.toLowerCase()}.js`;
+                const commandPath = path.join(process.cwd(), 'commands', commandFile);
+            if (fs.existsSync(commandPath)) {
+                // Dynamic Import with Timestamp to prevent caching issues
+                const commandModule = await import(pathToFileURL(commandPath).href + `?update=${Date.now()}`);
+                const runCommand = commandModule.default;
+
+                if (typeof runCommand === 'function') {
+                    await runCommand(sock, msg, args);
+                    console.log(`\x1b[32m[SUCCESS] -> ${commandName} executed\x1b[0m`);
+                } else {
+                    console.log(`\x1b[31m[ERROR] -> ${commandName}.js missing 'export default'\x1b[0m`);
+                }
+            } else {
+                console.log(`\x1b[31m[NOT FOUND] -> commands/${commandName}.js\x1b[0m`);
+            }
+        } catch (err) {
+            console.error("\x1b[31m[CRITICAL ERROR]\x1b[0m", err);
         }
     });
 }
 
+// Start the bot
 startAsura();

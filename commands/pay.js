@@ -1,63 +1,48 @@
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
     const amount = args[0] || "10";
-    const myUpi = "08arun7@upi"; 
+    const myUpi = "08arun7@upi";
+    const name = "arun•°Cumar";
 
     try {
-        await sock.sendMessage(from, { react: { text: "💰", key: msg.key } });
+        // Reaction for a professional touch
+        await sock.sendMessage(from, { react: { text: "💸", key: msg.key } });
+
+        // UPI Payment Link (This will open payment apps directly)
+        const upiLink = `upi://pay?pa=${myUpi}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
 
         const donateText = `
-*─『 💳 ASURA MD PAY 』─*
-*Hello,* @${msg.pushName || 'User'}
-*Support the development of Asura MD.*
+*─『 💳 ASURA MD DONATE 』─*\n\n` +
+            `*Hello,* @${msg.sender.split('@')[0]}\n` +
+            `Support the development of *Asura MD* by making a small donation.\n\n` +
+            `*PAYMENT DETAILS*\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `⊙ *Payee:* ${name}\n` +
+            `⊙ *Amount:* ₹${amount}.00\n` +
+            `⊙ *UPI ID:* \`${myUpi}\`\n` +
+            `━━━━━━━━━━━━━━━\n\n` +
+            `*Click the link below to pay:*\n` +
+            `_https://pay.upilink.in/pay/${myUpi}?am=${amount}_\n\n` +
+            `> പണമടച്ച ശേഷം സ്ക്രീൻഷോട്ട് അയക്കുക. 🥰`;
 
-*DETAILS*
-━━━━━━━━━━━━━━━━━
-⊙ *Payee:* arun•°Cumar
-⊙ *Amount:* ₹${amount}.00
-⊙ *UPI:* \`${myUpi}\`
-━━━━━━━━━━━━━━━━━
-
-🥰🥰🥰`;
-
-        // Native Flow Buttons (Modern & Stable)
-        const message = {
-            viewOnceMessage: {
-                message: {
-                    interactiveMessage: {
-                        header: { title: "⚡ *QUICK PAYMENT*" },
-                        body: { text: donateText },
-                        footer: { text: "© ᴀsᴜʀᴀ ᴍᴅ | ᴀʀᴜɴ" },
-                        nativeFlowMessage: {
-                            buttons: [
-                                {
-                                    "name": "cta_url",
-                                    "buttonParamsJson": `{"display_text":"💸 PAY NOW","url":"https://pay.upilink.in/pay/${myUpi}?am=${amount}","merchant_url":"https://pay.upilink.in/pay/${myUpi}?am=${amount}"}`
-                                },
-                                {
-                                    "name": "quick_reply",
-                                    "buttonParamsJson": `{"display_text":"👤 OWNER","id":"!owner"}`
-                                },
-                                {
-                                    "name": "quick_reply",
-                                    "buttonParamsJson": `{"display_text":"❓ HELP","id":"!help"}`
-                                }
-                            ]
-                        },
-                        contextInfo: {
-                            mentionedJid: [msg.sender],
-                            forwardingScore: 999,
-                            isForwarded: true
-                        }
-                    }
+        // Sending as a professional Text message with Mention
+        await sock.sendMessage(from, {
+            text: donateText,
+            mentions: [msg.sender],
+            contextInfo: {
+                externalAdReply: {
+                    title: "ASURA MD PAYMENT SYSTEM",
+                    body: "Support Our Project",
+                    thumbnailUrl: "https://files.catbox.moe/9e4b39.jpg", 
+                    sourceUrl: upiLink,
+                    mediaType: 1,
+                    renderLargerThumbnail: true
                 }
             }
-        };
-
-        await sock.relayMessage(from, message, {});
+        }, { quoted: msg });
 
     } catch (e) {
         console.error('Donate Error:', e);
-        await sock.sendMessage(from, { text: `Pay via UPI: ${myUpi}` }, { quoted: msg });
+        await sock.sendMessage(from, { text: `Payment UPI: ${myUpi}` });
     }
 };

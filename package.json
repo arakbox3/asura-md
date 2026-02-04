@@ -19,6 +19,7 @@
     "jimp": "latest",
     "node-fetch": "latest",
     "g-i-s": "latest",
+    "form-data": "latest", 
     "google-tts-api": "latest",
     "@google/generative-ai": "latest",
     "wa-sticker-formatter": "latest",

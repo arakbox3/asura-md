@@ -1,25 +1,12 @@
-import fs from "fs";
-
 export default async (sock, msg, args) => {
-    const from = msg.key.remoteJid;
-    const sender = msg.sender;
-    const amount = args[0] || "10";
-    const myUpi = "08arun7@upi";
-    const name = "Arun Cumar";
-    const transactionID = `ASURA-${Math.random().toString(36).toUpperCase().substring(2, 10)}`;
-    
-    const thumbPath = './media/thumb.jpg';
-
     try {
-        // Professional Reaction
-        await sock.sendMessage(from, { react: { text: "💰", key: msg.key } });
+        const sender = msg.key.participant || msg.key.remoteJid;
+        const thumbPath = './media/thumb.jpg'; 
 
-        const donateText = `
-*〔 ASURA-MD INFRASTRUCTURE 〕*
+        const donateText = `*〔 ASURA-MD INFRASTRUCTURE 〕*
 
 *SYSTEM STATUS:* 🟢 Operational
 *REQUEST TYPE:* Donation / Maintenance Support
-*REFERENCE:* \`${transactionID}\`
 
 Hello @${sender.split('@')[0]},
 To maintain our high-speed servers and keep development free, consider a contribution.
@@ -27,42 +14,27 @@ To maintain our high-speed servers and keep development free, consider a contrib
 *─── PAYMENT GATEWAY ───*
 
 ┌── 👤 *RECIPIENT*
-│ Name: ${name}
-└── UPI: \`${myUpi}\`
+│ Name: arunCumar
+└── UPI: 08arun7@upi
 
 ┌── 💰 *BILLING*
-│ Amount: ₹${amount}.00
+│ Amount: ₹ 10.00
 └── Currency: INR
 
 *─── QUICK ACTIONS ───*
 
 🔗 *DIRECT PAY:*
-https://pay.upilink.in/pay/${myUpi}?am=${amount}&pn=${encodeURIComponent(name)}
-
-> *Instructions:* Click the link above to pay via any UPI app. Please forward the transaction receipt for our records.
+https://pay.upilink.in/pay/08arun7@upi?am=10
 
 *© ASURA MD*`;
-
-        await sock.sendMessage(from, {
-            image: fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : { url: 'https://files.catbox.moe/9e4b39.jpg' },
+        
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbPath },
             caption: donateText,
-            mentions: [sender],
-            contextInfo: {
-                externalAdReply: {
-                    title: "ASURA-MD PREMIUM SUPPORT",
-                    body: "Support Open Source Development",
-                    mediaType: 1,
-                    previewType: "PHOTO",
-                    thumbnailUrl: 'https://files.catbox.moe/9e4b39.jpg', 
-                    sourceUrl: "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24",
-                    showAdAttribution: false,
-                    renderLargerThumbnail: false 
-                }
-            }
+            mentions: [sender]
         }, { quoted: msg });
 
     } catch (e) {
-        console.error('Professional Donate Error:', e);
-        await sock.sendMessage(from, { text: "System encountered an error processing the payment request." });
+        console.log("Error in donate command:", e);
     }
 };

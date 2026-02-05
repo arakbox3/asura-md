@@ -1,23 +1,27 @@
-import { makeWASocket, useMultiFileAuthState, delay, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from "@whiskeysockets/baileys";
+import pkg from "@whiskeysockets/baileys";
+const { makeWASocket, useMultiFileAuthState, delay, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = pkg;
 import fs from 'fs';
 import pino from 'pino';
+import path from 'path';
+
+const subBots = new Map();
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     let number = args[0]?.replace(/[^0-9]/g, '');
 
     if (!number) {
-        return sock.sendMessage(chat, { 
-            text: "❌ *Error: Number Missing!*\n\n*Usage:* `.pair 91xxxxxxxxxx`" 
-        }, { quoted: msg });
+        return sock.sendMessage(chat, { text: "❌ *Usage:* `.pair 91xxxxxxxxxx`" }, { quoted: msg });
     }
 
-    await sock.sendMessage(chat, { text: "⏳ *Generating Pairing Code...* Please wait." });
+    if (subBots.size >= 4) {
+        return sock.sendMessage(chat, { text: "❌ *Limit Reached!* ." });
+    }
+
+    await sock.sendMessage(chat, { text: "⏳ *Generating Pairing Code...*" });
 
     const subSessionPath = `./sessions/sub_${number}`;
-    if (!fs.existsSync(subSessionPath)) {
-        fs.mkdirSync(subSessionPath, { recursive: true });
-    }
+    if (!fs.existsSync(subSessionPath)) fs.mkdirSync(subSessionPath, { recursive: true });
 
     const { state, saveCreds } = await useMultiFileAuthState(subSessionPath);
     const { version } = await fetchLatestBaileysVersion();
@@ -37,9 +41,7 @@ export default async (sock, msg, args) => {
         if (!tempSock.authState.creds.registered) {
             await delay(3000); 
             const code = await tempSock.requestPairingCode(number);
-            
-            // കോഡ് ബ്ലോക്കിനുള്ളിൽ കൊടുത്താൽ സിംഗിൾ ടാപ്പിൽ കോപ്പി ചെയ്യാം
-            const responseText = `
+            await sock.sendMessage(chat, { text: `
 ┌────────────┐
 👺 ASURA MD ᴠ2.0
 └────────────┘
@@ -63,20 +65,61 @@ export default async (sock, msg, args) => {
 3. Select 'Link with phone number instead'.
 4. Tap and copy the code above and paste it.
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
-> *© Pᴏᴡᴇʀᴇᴅ Bʏ 👺 ASURA-MD ♡*`;
-
-            await sock.sendMessage(chat, { text: responseText }, { quoted: msg });
+> *© Pᴏᴡᴇʀᴇᴅ Bʏ 👺 ASURA-MD ♡* `});
         }
 
         tempSock.ev.on('creds.update', saveCreds);
+
         tempSock.ev.on('connection.update', async (update) => {
-            if (update.connection === 'open') {
-                await sock.sendMessage(chat, { text: `✅ *Success!* \n\nNumber *${number}* is now connected.` });
+            const { connection } = update;
+            if (connection === 'open') {
+                subBots.set(number, tempSock);
+                await tempSock.sendMessage(tempSock.user.id, { text: "✅ *ASURA-MD Connected*." });
+
+                // logout 24
+                setTimeout(async () => {
+                    if (subBots.has(number)) {
+                        await tempSock.logout();
+                        subBots.delete(number);
+                        fs.rmSync(subSessionPath, { recursive: true, force: true });
+                    }
+                }, 24 * 60 * 60 * 1000);
+            }
+        });
+
+        // 🟢 commands running part 
+        tempSock.ev.on('messages.upsert', async (chatUpdate) => {
+            try {
+                const subMsg = chatUpdate.messages[0];
+                if (!subMsg.message || subMsg.key.fromMe) return;
+
+                const from = subMsg.key.remoteJid;
+                const body = subMsg.message.conversation || 
+                             subMsg.message.extendedTextMessage?.text || 
+                             subMsg.message.imageMessage?.caption || 
+                             subMsg.message.videoMessage?.caption || '';
+
+                const prefix = /^[.!#$]/gi.test(body) ? body.match(/^[.!#$]/gi)[0] : '';
+                const isCmd = body.startsWith(prefix);
+                const command = isCmd ? body.slice(prefix.length).trim().split(' ')[0].toLowerCase() : '';
+                const cmdArgs = body.trim().split(/ +/).slice(1);
+
+                if (isCmd) {
+                    
+                    const cmdPath = path.resolve(`./commands/${command}.js`);
+                    
+                    if (fs.existsSync(cmdPath)) {
+                        const { default: runCommand } = await import(`file://${cmdPath}`);
+                        await runCommand(tempSock, subMsg, cmdArgs);
+                    }
+                }
+            } catch (err) {
+                console.error("Sub-bot Command Error:", err);
             }
         });
 
     } catch (error) {
-        console.error("Pairing Error:", error);
-        await sock.sendMessage(chat, { text: "❌ *Error:* Try again later." });
+        console.error(error);
+        await sock.sendMessage(chat, { text: "✋ Please wait..." });
     }
 };

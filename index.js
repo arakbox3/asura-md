@@ -110,6 +110,9 @@ async function startAsura() {
             const msg = chatUpdate.messages[0];
             if (!msg.message) return;
             const from = msg.key.remoteJid;
+            const isLid = from.endsWith('@lid');
+        if (!isLid) {
+            await sock.sendPresenceUpdate('composing', from);
             // Extract message body from various types (Text, Reply, Image/Video Caption)
              const mtype = Object.keys(msg.message)[0];
              const body = msg.message.conversation || 

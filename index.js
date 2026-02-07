@@ -106,19 +106,27 @@ async function startAsura() {
     
     // 5. Message & Command Handler
     sock.ev.on('messages.upsert', async (chatUpdate) => {
-        try {
-            const msg = chatUpdate.messages[0];
-            if (!msg.message) return;
-            const from = msg.key.remoteJid;
-            const isLid = from.endsWith('@lid');
+    try {
+        const msg = chatUpdate.messages[0];
+        if (!msg.message || msg.key.fromMe) return; 
+
+        const from = msg.key.remoteJid;
+        const isLid = from.endsWith('@lid');
+
+        // Typing status... 
         if (!isLid) {
             await sock.sendPresenceUpdate('composing', from);
-            // Extract message body from various types (Text, Reply, Image/Video Caption)
-             const mtype = Object.keys(msg.message)[0];
-             const body = msg.message.conversation || 
-             msg.message.extendedTextMessage?.text || 
-             msg.message.imageMessage?.caption || 
-             msg.message.videoMessage?.caption || '';
+        }
+
+        const mtype = Object.keys(msg.message).filter(key => 
+            !['messageContextInfo', 'senderKeyDistributionMessage'].includes(key)
+        )[0];
+
+         const body = (mtype === 'conversation') 
+            ? msg.message.conversation 
+            : (mtype === 'extendedTextMessage')
+            ? msg.message.extendedTextMessage?.text
+            : (msg.message[mtype]?.caption || msg.message[mtype]?.text || msg.message[mtype]?.selectedDisplayText || msg.message[mtype]?.title || '');
 
 
        // prefixes

@@ -124,38 +124,33 @@ async function startAsura() {
             : (msg.message[mtype]?.caption || msg.message[mtype]?.text || msg.message[mtype]?.selectedDisplayText || msg.message[mtype]?.title || '');
 
 
-       // prefixes
-        const prefixes = ".!@#¢$%^&*()_+-=÷×[]{};':\\\"π¶∆\\•√\₩£€\|,.<>/~₹";
-        const firstChar = body.charAt(0);
-        const isCmd = prefixes.includes(firstChar);
+              // prefixes
+              const prefixes = ".!@#¢$%^&*()_+-=÷×[]{};':\\\"π¶∆\\•√\₩£€\|,.<>/~₹";
+              const firstChar = body.charAt(0);
+              const isCmd = prefixes.includes(firstChar);
 
-       // Typing status... 
-        if (isCmd && !isLid) {
-            await sock.sendPresenceUpdate('composing', from);
-            await new Promise(resolve => setTimeout(resolve, 4000));
-          }
-
-                 if (isCmd && body.trim().length === 1) {
-                  await sock.sendMessage(from, { 
-                  text: "👺 *Asura-MD:* Please enter a command after the prefix (e.g., .menu) 🥰" 
-                  }, { quoted: msg });
+              if (!isCmd) return; 
+              // If only prefix sent
+              if (body.trim().length === 1) {
+              await sock.sendMessage(from, { 
+               text: "👺 *Asura-MD:*  _🔸️Please enter a command after the prefix (Eg., .menu) 🥰_" 
+                     }, { quoted: msg });
                return;
-             }
-            
-             if (isCmd) {
-             const prefix = firstChar;
-             const args = body.slice(prefix.length).trim().split(/ +/);
-             const commandName = args.shift()?.toLowerCase();
+               }
 
-             if (!commandName) return;
-             }
-            
-             if (isCmd) {
-             const prefix = firstChar;
-             const args = body.slice(prefix.length).trim().split(/ +/);
-             const commandName = args.shift()?.toLowerCase();
+               // Now real command parsing
+               const prefix = firstChar;
+               const args = body.slice(prefix.length).trim().split(/ +/);
+               const commandName = args.shift()?.toLowerCase();
 
-             if (!commandName) return;
+               if (!commandName) return;
+
+               // ✅ Typing status 
+               if (!isLid) {
+               await sock.sendPresenceUpdate('composing', from);
+               await new Promise(resolve => setTimeout(resolve, 4000));
+              }
+
               // Command File Execution 
                 const commandFile = `${commandName.toLowerCase()}.js`;
                 const commandPath = path.join(process.cwd(), 'commands', commandFile);

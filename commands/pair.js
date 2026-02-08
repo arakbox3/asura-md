@@ -66,14 +66,14 @@ export default async (sock, msg, args) => {
             },
             printQRInTerminal: false,
             logger: pino({ level: "silent" }),
-            browser: ["Chrome (Linux)", "", ""]
+            browser: pkg.Browsers.ubuntu("Chrome")
         });
 
         tempSock.ev.on("creds.update", saveCreds);
 
         // Pairing code
         if (!tempSock.authState.creds.registered) {
-            await delay(2000); // small delay for RAM optimization
+            await delay(5000); // delay for RAM optimization
             const code = await tempSock.requestPairingCode(number);
 
             await sock.sendMessage(chat, {

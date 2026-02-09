@@ -1,109 +1,146 @@
 import { Api, TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
+import { Readable } from "stream";
 
-// --- CONFIGURATION ---
-const apiId = 12938494; 
+// ========= CONFIG =========
+const apiId = 12938494;
 const apiHash = "bdbdfa189d74ffd44b5be4bed1a26247";
 const botToken = "7599052852:AAEMW-41BN1j3FwjkTN7bUkTTcliGAt5z8A";
-const channelId = "-1001891724070";
+const channelId = -1001891724070;
+// ==========================
 
-const client = new TelegramClient(new StringSession(""), apiId, apiHash, { 
+const client = new TelegramClient(new StringSession(""), apiId, apiHash, {
     connectionRetries: 5,
-    useWSS: true 
 });
 
-let isStarted = false;
-let searchCache = new Map();
+let started = false;
+let channelEntity;
+const userCache = new Map();
 
+// ---------- INIT TELEGRAM ----------
+async function initTelegram() {
+    if (started) return;
+
+    await client.start({ botAuthToken: botToken });
+
+    // Proper channel resolve (VERY IMPORTANT)
+    channelEntity = await client.getEntity(channelId);
+
+    started = true;
+    console.log("✅ Telegram Connected");
+}
+
+// ---------- FILENAME HELPER ----------
+function getFileName(media) {
+    if (media?.document) {
+        const attr = media.document.attributes.find(a =>
+            a instanceof Api.DocumentAttributeFilename
+        );
+        return attr?.fileName || "Media_File";
+    }
+    return "Video_File";
+}
+
+// ---------- TELEGRAM TRUE STREAM ----------
+async function telegramReadableStream(media) {
+    const iterator = client.iterDownload(media, {
+        offset: 0,
+        requestSize: 1024 * 512, // 512KB chunks
+    });
+
+    return Readable.from(iterator);
+}
+
+// ---------- MAIN EXPORT ----------
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
     const sender = msg.key.participant || from;
-    const text = (msg.message?.conversation || 
-                  msg.message?.extendedTextMessage?.text || "").trim().toLowerCase();
+    const text = (
+        msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
+        ""
+    ).trim();
 
     try {
-        if (!isStarted) {
-            await client.start({ botAuthToken: botToken });
-            isStarted = true;
+        await initTelegram();
+
+        // ================= .tv SHUFFLE =================
+        if (text === ".tv") {
+            await sock.sendMessage(from, { text: "🎲 Fetching random media..." }, { quoted: msg });
+
+            const history = await client.getMessages(channelEntity, { limit: 300 });
+            const mediaMsgs = history.filter(m => m.media);
+
+            if (!mediaMsgs.length)
+                return sock.sendMessage(from, { text: "❌ No media found in channel" });
+
+            const shuffled = mediaMsgs.sort(() => 0.5 - Math.random()).slice(0, 15);
+            userCache.set(sender, shuffled);
+
+            let list = `╭─〔 👺 ASURA TV SHUFFLE 〕─\n\n`;
+            shuffled.forEach((m, i) => {
+                list += `*${i + 1}* ➠ ${getFileName(m.media)}\n\n`;
+            });
+            list += "Reply with number to stream";
+
+            return sock.sendMessage(from, { text: list }, { quoted: msg });
         }
 
-        // --- 1. RANDOM LIST LOGIC (.tv) ---
-        if (text === '.tv') {
-            await sock.sendMessage(from, { text: "🎲 *Fetching random files from Asura DB...*" });
+        // ================= .tv NAME SEARCH =================
+        if (text.startsWith(".tv ")) {
+            const query = text.replace(".tv ", "").toLowerCase();
 
-            // ചാനലിലെ അവസാനത്തെ 100 മെസേജുകൾ എടുക്കുന്നു
-            const result = await client.invoke(
-                new Api.messages.GetHistory({
-                    peer: channelId,
-                    limit: 100,
-                })
+            await sock.sendMessage(from, { text: `🔎 Searching: ${query}` }, { quoted: msg });
+
+            const history = await client.getMessages(channelEntity, { limit: 500 });
+
+            const results = history.filter(m =>
+                m.media &&
+                getFileName(m.media).toLowerCase().includes(query)
             );
 
-            // മീഡിയ ഉള്ളവ മാത്രം ഫിൽട്ടർ ചെയ്യുന്നു
-            const files = result.messages.filter(m => m.media);
-            
-            if (files.length === 0) return sock.sendMessage(from, { text: "❌ *No files found!*" });
+            if (!results.length)
+                return sock.sendMessage(from, { text: "❌ No matching files found" });
 
-            // ഷഫിൾ ചെയ്ത് 15 എണ്ണം സെലക്ട് ചെയ്യുന്നു
-            const shuffled = files.sort(() => 0.5 - Math.random()).slice(0, 15);
-            searchCache.set(sender, shuffled);
+            const selected = results.slice(0, 15);
+            userCache.set(sender, selected);
 
-            let listMsg = `╭─〔 *👺 ASURA MD TV* 〕─\n`;
-            listMsg += `│ 🎭 *Mode:* Random Shuffle\n`;
-            listMsg += `│ 🧊 *Total:* ${shuffled.length} Files\n`;
-            listMsg += `╰─────────────────\n\n`;
-
-            shuffled.forEach((m, index) => {
-                let name = "Video/File";
-                if (m.media.document) {
-                    name = m.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename)?.fileName || "Media File";
-                }
-                listMsg += `*${index + 1}* ➠ ${name}\n\n`;
+            let list = `╭─〔 👺 ASURA TV SEARCH 〕─\n\n`;
+            selected.forEach((m, i) => {
+                list += `*${i + 1}* ➠ ${getFileName(m.media)}\n\n`;
             });
+            list += "Reply with number to stream";
 
-            listMsg += `> *Reply with number to get the file!*`;
-            return await sock.sendMessage(from, { text: listMsg }, { quoted: msg });
+            return sock.sendMessage(from, { text: list }, { quoted: msg });
         }
 
-        // --- 2. STREAMING DOWNLOAD (Reply Handler) ---
-        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo;
-        if (quotedMsg && quotedMsg.quotedMessage && !isNaN(text)) {
-            const quotedText = quotedMsg.quotedMessage.conversation || quotedMsg.quotedMessage.extendedTextMessage?.text || "";
-            
-            if (quotedText.includes("ASURA MD TV")) {
-                const index = parseInt(text) - 1;
-                const userFiles = searchCache.get(sender);
+        // ================= REPLY NUMBER STREAM =================
+        const quoted = msg.message?.extendedTextMessage?.contextInfo;
 
-                if (!userFiles || !userFiles[index]) return;
+        if (quoted && !isNaN(text)) {
+            const files = userCache.get(sender);
+            const index = parseInt(text) - 1;
 
-                const selected = userFiles[index];
-                const media = selected.media;
-                
-                let fileName = "asura_media";
-                let mimeType = "video/mp4"; // ഡിഫോൾട്ട് ആയി വീഡിയോ ആയി സെറ്റ് ചെയ്യുന്നു
+            if (!files || !files[index]) return;
 
-                if (media.document) {
-                    fileName = media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename)?.fileName || "file";
-                    mimeType = media.document.mimeType;
-                }
+            const media = files[index].media;
+            const fileName = getFileName(media);
+            const mimeType = media.document?.mimeType || "video/mp4";
 
-                await sock.sendMessage(from, { text: `🚀 *Asura MD is streaming your file...*` }, { quoted: msg });
+            await sock.sendMessage(from, { text: "🚀 Streaming large file from Telegram..." }, { quoted: msg });
 
-                // STREAMING: ബഫർ ഉപയോഗിച്ച് ഡൗൺലോഡ് ചെയ്യുന്നു
-                const buffer = await client.downloadMedia(media, {
-                    workers: 16, 
-                });
+            const stream = await telegramReadableStream(media);
 
-                await sock.sendMessage(from, {
-                    document: buffer, 
-                    mimetype: mimeType,
-                    fileName: fileName,
-                    caption: `✅ *Enjoy your video!*\n\n*© ᴀꜱᴜʀᴀ ᴍᴅ*`
-                }, { quoted: msg });
-            }
+            await sock.sendMessage(from, {
+                document: stream,  // STREAM HERE (no RAM)
+                mimetype: mimeType,
+                fileName: fileName,
+                caption: "✅ Streamed via ASURA MD"
+            }, { quoted: msg });
         }
 
-    } catch (error) {
-        console.error("Error:", error);
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(from, { text: "Error: " + err.message });
     }
 };

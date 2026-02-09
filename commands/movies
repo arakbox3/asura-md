@@ -1,23 +1,7 @@
 import { Api, TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions";
 
-const apiId = 12938494; 
-const apiHash = "bdbdfa189d74ffd44b5be4bed1a26247";
-const botToken = "7599052852:AAEMW-41BN1j3FwjkTN7bUkTTcliGAt5z8A";
-const channelId = "-1001891724070";
-
-// session string കാലിയായി വെച്ചു (ഓരോ തവണയും ഫ്രഷ് ആയി ലോഗിൻ ചെയ്യും)
-const client = new TelegramClient(new StringSession(""), apiId, apiHash, { 
-    connectionRetries: 5 
-});
-
-// ബോട്ടായി ലോഗിൻ ചെയ്യാനുള്ള ഫംഗ്ഷൻ
-async function connectTG() {
-    if (!client.connected) {
-        await client.start({ botAuthToken: botToken });
-    }
-}
-
+// താൽക്കാലികമായി സെർച്ച് റിസൾട്ട് സൂക്ഷിക്കാൻ
 let searchCache = {};
 
 export default async (sock, msg, args) => {
@@ -25,51 +9,52 @@ export default async (sock, msg, args) => {
     const sender = msg.key.participant || from;
     const text = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
 
-    // --- 1. സെർച്ച് ലോജിക് (.video <name>) ---
+    // ടെലിഗ്രാം സെറ്റിംഗ്സ് (നിങ്ങളുടെ വിവരങ്ങൾ)
+    const apiId = 12938494; 
+    const apiHash = "bdbdfa189d74ffd44b5be4bed1a26247";
+    const botToken = "7599052852:AAEMW-41BN1j3FwjkTN7bUkTTcliGAt5z8A";
+    const channelId = "-1001891724070";
+
+    const client = new TelegramClient(new StringSession(""), apiId, apiHash, { connectionRetries: 5 });
+
+    // --- 1. സെർച്ച് ലോജിക് (.video) ---
     if (text.startsWith('.video')) {
         const query = args.join(" ");
         if (!query) return sock.sendMessage(from, { text: "❌ Example: .video mummy" });
 
         try {
-            await connectTG(); // കണക്ഷൻ ഉറപ്പാക്കുന്നു
+            await client.start({ botAuthToken: botToken }); // കമാൻഡ് വരുമ്പോൾ മാത്രം കണക്ട് ചെയ്യുന്നു
             
-            // വലിയ ചാനലുകളിൽ സെർച്ച് ചെയ്യാനുള്ള പവർഫുൾ ലോജിക്
             const result = await client.invoke(
                 new Api.messages.Search({
                     peer: channelId,
                     q: query,
                     filter: new Api.InputMessagesFilterDocument(),
-                    limit: 50, // റിസൾട്ട് ലിമിറ്റ് കൂട്ടി (ലക്ഷക്കണക്കിന് ഫയലുകൾ ഉണ്ടെങ്കിലും ഇത് സഹായിക്കും)
-                    offsetId: 0,
-                    addOffset: 0,
-                    maxId: 0,
-                    minId: 0,
-                    hash: 0
+                    limit: 20
                 })
             );
 
-            if (!result.messages || result.messages.length === 0) {
-                return sock.sendMessage(from, { text: "❌ ഫയലുകൾ ഒന്നും കണ്ടെത്താനായില്ല!" });
+            if (!result.messages.length) {
+                await client.disconnect();
+                return sock.sendMessage(from, { text: "❌ Not found!" });
             }
 
             searchCache[sender] = result.messages;
             
             let listMsg = `📂 *Search Results for:* "${query}"\n\n`;
             result.messages.forEach((m, index) => {
-                // ഫയൽ നെയിം കൃത്യമായി എടുക്കാൻ
                 const docAttr = m.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
                 const fName = docAttr ? docAttr.fileName : "Unknown File";
-                const fSize = (m.media.document.size / (1024 * 1024)).toFixed(2);
-                
-                listMsg += `${index + 1}. 📁 ${fName} (${fSize} MB)\n`;
+                listMsg += `${index + 1}. 📁 ${fName}\n`;
             });
+            listMsg += `\n*replay 1,2.*`;
 
-            listMsg += `\n*ഫയൽ ലഭിക്കാൻ നമ്പറിന് റിപ്ലൈ നൽകുക.*`;
+            await client.disconnect();
             return await sock.sendMessage(from, { text: listMsg });
 
         } catch (e) {
             console.error(e);
-            return sock.sendMessage(from, { text: "⚠️ ടെലിഗ്രാം കണക്ഷൻ എറർ!" });
+            return sock.sendMessage(from, { text: "⚠️ ടെലിഗ്രാം എറർ!" });
         }
     }
 
@@ -77,37 +62,32 @@ export default async (sock, msg, args) => {
     const quotedInfo = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = quotedInfo?.quotedMessage?.conversation || quotedInfo?.quotedMessage?.extendedTextMessage?.text || "";
 
-    if (quotedMsg.includes("Search Results for") && !isNaN(text)) {
+    if (quotedMsg.includes("Search Results for") && !isNaN(text) && searchCache[sender]) {
         const index = parseInt(text) - 1;
-        const userFiles = searchCache[sender];
+        const selectedMsg = searchCache[sender][index];
 
-        if (!userFiles || !userFiles[index]) return;
+        if (!selectedMsg) return;
 
         try {
-            await connectTG();
-            const selectedMsg = userFiles[index];
+            await sock.sendMessage(from, { text: "⏳ ഡൗൺലോഡ് ചെയ്യുന്നു..." });
+            await client.start({ botAuthToken: botToken });
+
+            const buffer = await client.downloadMedia(selectedMsg.media, { workers: 4 });
             const doc = selectedMsg.media.document;
-            
             const docAttr = doc.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
             const fName = docAttr ? docAttr.fileName : "file.mp4";
 
-            await sock.sendMessage(from, { text: `📥 *${fName}* തയ്യാറാക്കുന്നു...` });
-
-            // ഡൗൺലോഡ് ചെയ്ത് സ്ട്രീം ചെയ്യുന്നു
-            const buffer = await client.downloadMedia(selectedMsg.media, {
-                workers: 4
-            });
-
-            return await sock.sendMessage(from, {
+            await sock.sendMessage(from, {
                 document: buffer,
                 mimetype: doc.mimeType,
                 fileName: fName,
-                caption: `✅ *Requested File:* ${fName}`
+                caption: `✅ *Done:* ${fName}`
             }, { quoted: msg });
 
+            await client.disconnect();
         } catch (e) {
             console.error(e);
-            return sock.sendMessage(from, { text: "❌ ഫയൽ അയക്കുന്നതിൽ പരാജയപ്പെട്ടു." });
+            await sock.sendMessage(from, { text: "❌ Error" });
         }
     }
 };

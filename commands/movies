@@ -1,75 +1,113 @@
 import { Api, TelegramClient } from "telegram";
-import { StringSession } from "gramjs/sessions";
+import { StringSession } from "telegram/sessions";
 
-// ടെലിഗ്രാം സെറ്റിംഗ്സ്
 const apiId = 12938494; 
 const apiHash = "bdbdfa189d74ffd44b5be4bed1a26247";
 const botToken = "7599052852:AAEMW-41BN1j3FwjkTN7bUkTTcliGAt5z8A";
 const channelId = "-1001891724070";
 
-const client = new TelegramClient(new StringSession(""), apiId, apiHash, { connectionRetries: 5 });
-(async () => { await client.start({ botAuthToken: botToken }); })();
+// session string കാലിയായി വെച്ചു (ഓരോ തവണയും ഫ്രഷ് ആയി ലോഗിൻ ചെയ്യും)
+const client = new TelegramClient(new StringSession(""), apiId, apiHash, { 
+    connectionRetries: 5 
+});
 
-// താൽക്കാലികമായി സെർച്ച് റിസൾട്ട് സൂക്ഷിക്കാൻ (യൂസർ ഐഡി അനുസരിച്ച്)
+// ബോട്ടായി ലോഗിൻ ചെയ്യാനുള്ള ഫംഗ്ഷൻ
+async function connectTG() {
+    if (!client.connected) {
+        await client.start({ botAuthToken: botToken });
+    }
+}
+
 let searchCache = {};
 
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
     const sender = msg.key.participant || from;
-    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+    const text = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
 
     // --- 1. സെർച്ച് ലോജിക് (.video <name>) ---
     if (text.startsWith('.video')) {
         const query = args.join(" ");
-        if (!query) return sock.sendMessage(from, { text: "❌ example: .video mummy!" });
+        if (!query) return sock.sendMessage(from, { text: "❌ Example: .video mummy" });
 
-        const result = await client.invoke(
-            new Api.messages.Search({
-                peer: channelId,
-                q: query,
-                filter: new Api.InputMessagesFilterDocument(),
-                limit: 20, // 20 എണ്ണം വരെ കാണിക്കും
-            })
-        );
+        try {
+            await connectTG(); // കണക്ഷൻ ഉറപ്പാക്കുന്നു
+            
+            // വലിയ ചാനലുകളിൽ സെർച്ച് ചെയ്യാനുള്ള പവർഫുൾ ലോജിക്
+            const result = await client.invoke(
+                new Api.messages.Search({
+                    peer: channelId,
+                    q: query,
+                    filter: new Api.InputMessagesFilterDocument(),
+                    limit: 50, // റിസൾട്ട് ലിമിറ്റ് കൂട്ടി (ലക്ഷക്കണക്കിന് ഫയലുകൾ ഉണ്ടെങ്കിലും ഇത് സഹായിക്കും)
+                    offsetId: 0,
+                    addOffset: 0,
+                    maxId: 0,
+                    minId: 0,
+                    hash: 0
+                })
+            );
 
-        if (!result.messages.length) return sock.sendMessage(from, { text: "❌ ഫയലുകൾ ഒന്നും കണ്ടില്ല!" });
+            if (!result.messages || result.messages.length === 0) {
+                return sock.sendMessage(from, { text: "❌ ഫയലുകൾ ഒന്നും കണ്ടെത്താനായില്ല!" });
+            }
 
-        let listMsg = `📂 *Search Results for:* "${query}"\n\n`;
-        searchCache[sender] = result.messages; // റിസൾട്ട് സേവ് ചെയ്യുന്നു
+            searchCache[sender] = result.messages;
+            
+            let listMsg = `📂 *Search Results for:* "${query}"\n\n`;
+            result.messages.forEach((m, index) => {
+                // ഫയൽ നെയിം കൃത്യമായി എടുക്കാൻ
+                const docAttr = m.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
+                const fName = docAttr ? docAttr.fileName : "Unknown File";
+                const fSize = (m.media.document.size / (1024 * 1024)).toFixed(2);
+                
+                listMsg += `${index + 1}. 📁 ${fName} (${fSize} MB)\n`;
+            });
 
-        result.messages.forEach((m, index) => {
-            const fName = m.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename)?.fileName || "Unknown File";
-            const fSize = (m.media.document.size / (1024 * 1024)).toFixed(2);
-            listMsg += `${index + 1}. 📁 ${fName} (${fSize} MB)\n`;
-        });
+            listMsg += `\n*ഫയൽ ലഭിക്കാൻ നമ്പറിന് റിപ്ലൈ നൽകുക.*`;
+            return await sock.sendMessage(from, { text: listMsg });
 
-        listMsg += `\n*ഫയൽ ലഭിക്കാൻ നമ്പറിന് റിപ്ലൈ നൽകുക (Reply with Number)*`;
-        return await sock.sendMessage(from, { text: listMsg });
+        } catch (e) {
+            console.error(e);
+            return sock.sendMessage(from, { text: "⚠️ ടെലിഗ്രാം കണക്ഷൻ എറർ!" });
+        }
     }
 
     // --- 2. റിപ്ലൈ ലോജിക് (നമ്പർ അയക്കുമ്പോൾ) ---
-    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (quotedMsg && quotedMsg.conversation?.includes("Search Results for") && !isNaN(text)) {
+    const quotedInfo = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quotedInfo?.quotedMessage?.conversation || quotedInfo?.quotedMessage?.extendedTextMessage?.text || "";
+
+    if (quotedMsg.includes("Search Results for") && !isNaN(text)) {
         const index = parseInt(text) - 1;
         const userFiles = searchCache[sender];
 
-        if (!userFiles || !userFiles[index]) {
-            return await sock.sendMessage(from, { text: "❌ തെറ്റായ നമ്പർ അല്ലെങ്കിൽ ലിസ്റ്റ് കാലാവധി കഴിഞ്ഞു!" });
+        if (!userFiles || !userFiles[index]) return;
+
+        try {
+            await connectTG();
+            const selectedMsg = userFiles[index];
+            const doc = selectedMsg.media.document;
+            
+            const docAttr = doc.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
+            const fName = docAttr ? docAttr.fileName : "file.mp4";
+
+            await sock.sendMessage(from, { text: `📥 *${fName}* തയ്യാറാക്കുന്നു...` });
+
+            // ഡൗൺലോഡ് ചെയ്ത് സ്ട്രീം ചെയ്യുന്നു
+            const buffer = await client.downloadMedia(selectedMsg.media, {
+                workers: 4
+            });
+
+            return await sock.sendMessage(from, {
+                document: buffer,
+                mimetype: doc.mimeType,
+                fileName: fName,
+                caption: `✅ *Requested File:* ${fName}`
+            }, { quoted: msg });
+
+        } catch (e) {
+            console.error(e);
+            return sock.sendMessage(from, { text: "❌ ഫയൽ അയക്കുന്നതിൽ പരാജയപ്പെട്ടു." });
         }
-
-        const selectedMsg = userFiles[index];
-        const doc = selectedMsg.media.document;
-        const fName = doc.attributes.find(a => a instanceof Api.DocumentAttributeFilename)?.fileName || "file";
-
-        await sock.sendMessage(from, { text: "📥 അപ്‌ലോഡ് ചെയ്യുന്നു, ദയവായി കാത്തിരിക്കൂ..." });
-
-        const buffer = await client.downloadMedia(selectedMsg.media, { workers: 4 });
-
-        await sock.sendMessage(from, {
-            document: buffer,
-            mimetype: doc.mimeType,
-            fileName: fName,
-            caption: `✅ *Requested:* ${fName}`
-        }, { quoted: msg });
     }
 };

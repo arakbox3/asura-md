@@ -1,107 +1,73 @@
-import { Api, TelegramClient } from "telegram";
-import { StringSession } from "telegram/sessions/index.js";
-import { Readable } from "stream";
+import axios from 'axios';
 
-// ========= CONFIG =========
-const apiId = 12938494; 
-const apiHash = "bdbdfa189d74ffd44b5be4bed1a26247"; 
-const botToken = "7599052852:AAEMW-41BN1j3FwjkTN7bUkTTcliGAt5z8A"; 
-const channelId = -1001891724070; 
-// ==========================
-
-const client = new TelegramClient(new StringSession(""), apiId, apiHash, {
-    connectionRetries: 5,
-});
-
-let channelEntity;
-const userCache = new Map();
-
-// ---------- TELEGRAM INIT ----------
-async function initTelegram() {
-    if (!client.connected) {
-        await client.start({ botAuthToken: botToken });
-        channelEntity = await client.getEntity(channelId);
-        console.log("✅ Telegram Bot Connected");
-    }
-}
-
-// ---------- FILENAME HELPER ----------
-function getFileName(media) {
-    if (media?.document) {
-        const attr = media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
-        return attr?.fileName || "Large_File";
-    }
-    return "Video_File";
-}
-
-// ---------- MAIN FUNCTION ----------
-export default async (sock, msg) => {
-    const from = msg.key.remoteJid;
-    const sender = msg.key.participant || from;
-    const text = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
+export default async (sock, msg, args) => {
+    const chat = msg.key.remoteJid;
+    
+    // ടൈപ്പിംഗ് സ്റ്റാറ്റസ്
+    await sock.sendPresenceUpdate('composing', chat);
 
     try {
-        await initTelegram();
+        // ഉപയോക്താവ് വിഷയം നൽകിയിട്ടുണ്ടെങ്കിൽ അത്, അല്ലെങ്കിൽ 'India' വാർത്തകൾ
+        const query = args.length > 0 ? args.join(' ') : 'India';
+        
+        // Google News RSS URL (English - India)
+        const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
 
-        // --- .tv കമാൻഡ് (List കാണിക്കാൻ) ---
-        if (text === ".tv" || text.startsWith(".tv ")) {
-            const query = text.replace(".tv ", "").toLowerCase();
-            await sock.sendMessage(from, { text: "🔍 Searching files..." }, { quoted: msg });
-
-            const history = await client.getMessages(channelEntity, { limit: 100 });
-            let mediaMsgs = history.filter(m => m.media);
-
-            if (text.startsWith(".tv ")) {
-                mediaMsgs = mediaMsgs.filter(m => getFileName(m.media).toLowerCase().includes(query));
+        const { data } = await axios.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
             }
+        });
 
-            if (!mediaMsgs.length) return sock.sendMessage(from, { text: "❌ No files found!" });
-
-            const selected = mediaMsgs.slice(0, 20);
-            userCache.set(sender, selected);
-
-            let list = `╭─〔 👺 ASURA TV 〕─\n\n`;
-            selected.forEach((m, i) => {
-                list += `${i + 1} 📁 ${getFileName(m.media)}\n\n`;
-            });
-            list += "Reply with a number to stream this file.";
-
-            return sock.sendMessage(from, { text: list }, { quoted: msg });
+        // വാർത്തകൾ വേർതിരിച്ചെടുക്കുന്നു
+        const items = data.match(/<item>([\s\S]*?)<\/item>/g) || [];
+        
+        if (items.length === 0) {
+            return await sock.sendMessage(chat, { text: `❌ No news found for: ${query}` }, { quoted: msg });
         }
 
-        // --- Reply വഴി നമ്പർ കൊടുക്കുമ്പോൾ ഉള്ള പ്രവർത്തനം ---
-        const quoted = msg.message?.extendedTextMessage?.contextInfo;
-        if (quoted && !isNaN(text)) {
-            const files = userCache.get(sender);
-            const index = parseInt(text) - 1;
+        let newsMsg = `*📰 LATEST NEWS: ${query.toUpperCase()}*\n\n`;
 
-            if (!files || !files[index]) return;
+        // ആദ്യത്തെ 5 വാർത്തകൾ മാത്രം എടുക്കുന്നു
+        for (let i = 0; i < Math.min(items.length, 5); i++) {
+            const item = items[i];
+            
+            // ടൈറ്റിൽ, ലിങ്ക്, ഉറവിടം എന്നിവ Regex വഴി എടുക്കുന്നു
+            let title = item.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "No Title";
+            const link = item.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
+            const source = item.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "Google News";
 
-            const media = files[index].media;
-            const fileName = getFileName(media);
-            const fileSize = media.document?.size || 0;
-            const mimeType = media.document?.mimeType || "video/mp4";
+            // HTML entities ക്ലീൻ ചെയ്യുന്നു
+            title = title.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-            await sock.sendMessage(from, { text: `🚀 Starting stream: ${fileName}\nSize: ${(fileSize / (1024 * 1024)).toFixed(2)} MB` }, { quoted: msg });
-
-            // Streaming starts here
-            const iterator = client.iterDownload(media, {
-                offset: 0,
-                requestSize: 1024 * 1024, // 1MB chunks for speed
-            });
-
-            const stream = Readable.from(iterator);
-
-            await sock.sendMessage(from, {
-                document: stream, // Large files are safer as document
-                mimetype: mimeType,
-                fileName: fileName,
-                caption: `✅ Successfully Streamed: ${fileName}`
-            }, { quoted: msg });
+            newsMsg += `*${i + 1}. ${title}*\n`;
+            newsMsg += `📍 _Source: ${source}_\n`;
+            newsMsg += `🔗 ${link}\n\n`;
         }
 
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(from, { text: "Error: " + err.message });
+        newsMsg += `> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
+
+        // വാർത്ത അയക്കുന്നു
+        await sock.sendMessage(chat, { 
+            text: newsMsg,
+            contextInfo: {
+                externalAdReply: {
+                    title: "👺 ASURA MD NEWS UPDATES",
+                    body: `Top stories about ${query}`,
+                    mediaType: 1,
+                    sourceUrl: "https://news.google.com", 
+                    showAdAttribution: false,
+                    renderLargerThumbnail: true
+                }
+            }
+        }, { quoted: msg });
+
+        // റിയാക്ഷൻ
+        await sock.sendMessage(chat, { react: { text: "📰", key: msg.key } });
+
+    } catch (e) {
+        console.error("News Error:", e);
+        await sock.sendMessage(chat, { text: "❌ Error fetching news. Please try again later." }, { quoted: msg });
     }
 };
+

@@ -4,19 +4,23 @@ export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const city = args.join(' ');
 
-    if (!city) return sock.sendMessage(chat, { text: "📍 *Please provide a location!*\n_Example: .weather Kochi_" }, { quoted: msg });
+    if (!city) {
+        return sock.sendMessage(chat, {
+            text: "📍 *Please provide a location!*\n_Example: .weather Kochi_"
+        }, { quoted: msg });
+    }
 
     try {
         await sock.sendMessage(chat, { react: { text: "☁️", key: msg.key } });
 
-        // wttr.in JSON format fetch
+        // Weather JSON
         const response = await axios.get(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
         const data = response.data;
+
         const current = data.current_condition[0];
         const area = data.nearest_area[0];
         const weatherDesc = current.weatherDesc[0].value;
-        
-        // Stylish Weather Symbols based on condition
+
         const getEmoji = (desc) => {
             desc = desc.toLowerCase();
             if (desc.includes("sun") || desc.includes("clear")) return "☀️";
@@ -27,33 +31,36 @@ export default async (sock, msg, args) => {
             return "🌤️";
         };
 
+        // ✅ Fetch weather image as buffer
+        const img = await axios.get(
+            `https://wttr.in/${encodeURIComponent(city)}.png`,
+            { responseType: "arraybuffer" }
+        );
+
         let weatherMsg = `╭━━〔 *WEATHER REPORT* 〕━╮\n`;
-        weatherMsg += `┃\n`;
         weatherMsg += `┃ 📍 *Location:* ${area.areaName[0].value}\n`;
         weatherMsg += `┃ 🌍 *Region:* ${area.region[0].value}, ${area.country[0].value}\n`;
-        weatherMsg += `┃\n`;
-        weatherMsg += `┃ 🌡️ *Temperature:* ${current.temp_C}°C (Feels like ${current.FeelsLikeC}°C)\n`;
+        weatherMsg += `┃ 🌡️ *Temp:* ${current.temp_C}°C (Feels ${current.FeelsLikeC}°C)\n`;
         weatherMsg += `┃ ${getEmoji(weatherDesc)} *Condition:* ${weatherDesc}\n`;
         weatherMsg += `┃ 💧 *Humidity:* ${current.humidity}%\n`;
         weatherMsg += `┃ 💨 *Wind:* ${current.windspeedKmph} km/h\n`;
         weatherMsg += `┃ 👁️ *Visibility:* ${current.visibility} km\n`;
         weatherMsg += `┃ ☀️ *UV Index:* ${current.uvIndex}\n`;
-        weatherMsg += `┃\n`;
         weatherMsg += `╰━━━━━━━━━━━━━━━━━━━━━━╯\n\n`;
-        weatherMsg += `🔗 *More Info:* https://wttr.in/${encodeURIComponent(city)}\n\n`;
-        weatherMsg += `> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
+        weatherMsg += `🔗 https://wttr.in/${encodeURIComponent(city)}\n\n`;
+        weatherMsg += `> © 👺Asura MD`;
 
-        await sock.sendMessage(chat, { 
+        await sock.sendMessage(chat, {
             text: weatherMsg,
             contextInfo: {
                 externalAdReply: {
-                    title: `WEATHER: ${area.areaName[0].value.toUpperCase()}`,
-                    body: `Current Status: ${weatherDesc} | ${current.temp_C}°C`,
-                    thumbnailUrl: "https://wttr.in/" + encodeURIComponent(city) + "_0pq.png", // Dynamic weather image
+                    title: `Weather in ${area.areaName[0].value}`,
+                    body: `${weatherDesc} | ${current.temp_C}°C`,
+                    thumbnail: Buffer.from(img.data), 
                     mediaType: 1,
                     sourceUrl: `https://wttr.in/${encodeURIComponent(city)}`,
-                    showAdAttribution: false,
-                    renderLargerThumbnail: true 
+                    renderLargerThumbnail: true,
+                    showAdAttribution: false
                 }
             }
         }, { quoted: msg });
@@ -62,6 +69,8 @@ export default async (sock, msg, args) => {
 
     } catch (e) {
         console.error(e);
-        await sock.sendMessage(chat, { text: "❌ *Location not found!*\nPlease check the city name and try again." }, { quoted: msg });
+        await sock.sendMessage(chat, {
+            text: "❌ *Location not found!*\nPlease check the city name."
+        }, { quoted: msg });
     }
 };

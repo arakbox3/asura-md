@@ -1,95 +1,81 @@
-import yts from "yt-search";
-import axios from "axios";
+import axios from 'axios';
+import ytSearch from 'yt-search';
 
-// API ഫങ്ക്ഷനുകൾ
-async function getDownloadUrl(youtubeUrl) {
-    try {
-        // 1. ആദ്യത്തെ API (Yupra) പരീക്ഷിക്കുന്നു
-        const yupraUrl = `https://api.yupra.my.id/api/downloader/ytmp4?url=${encodeURIComponent(youtubeUrl)}`;
-        const res = await axios.get(yupraUrl);
-        if (res?.data?.success && res?.data?.data?.download_url) {
-            return res.data.data.download_url;
-        }
-    } catch (e) {
-        console.log("Yupra API failed, trying Okatsu...");
-    }
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
+// YouTube Downloader Function (Streaming)
+const ytd = async (url) => {
+    const headers = { 
+        'Referer': 'https://id.ytmp3.mobi/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    };
+    let videoID;
 
     try {
-        // 2. രണ്ടാമത്തെ API (Okatsu) പരീക്ഷിക്കുന്നു
-        const okatsuUrl = `https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(youtubeUrl)}`;
-        const res = await axios.get(okatsuUrl);
-        if (res?.data?.result?.mp4) {
-            return res.data.result.mp4;
-        }
-    } catch (e) {
-        console.error("Both APIs failed");
+        const parsed = new URL(url);
+        if (parsed.hostname === "youtu.be") videoID = parsed.pathname.slice(1);
+        else videoID = parsed.searchParams.get("v");
+    } catch {
+        throw new Error("Invalid YouTube URL");
     }
-    return null;
-}
+
+    if (!videoID) throw new Error("Couldn't extract video ID");
+
+    const { data: initData } = await axios.get(
+        `https://d.ymcdn.org/api/v1/init?p=y&23=1llum1n471&_=${Math.random()}`,
+        { headers }
+    );
+    
+    const urlParam = { v: videoID, f: "mp4", _: Math.random() };
+    const fullConvertUrl = `${initData.convertURL}&${new URLSearchParams(urlParam)}`;
+    const { data: convertData } = await axios.get(fullConvertUrl, { headers });
+
+    let attempts = 0;
+    while (attempts < 30) {
+        const { data: prog } = await axios.get(convertData.progressURL, { headers });
+        if (prog.error) throw new Error("Conversion failed");
+        if (prog.progress === 3) {
+            return { title: prog.title, url: convertData.downloadURL };
+        }
+        await delay(1000);
+        attempts++;
+    }
+    throw new Error("Timeout");
+};
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
-    const searchText = args.join(" ");
+    const query = args.join(' ');
 
-    if (!searchText) {
-        return sock.sendMessage(chat, { text: "Usage: .video <name or link>" });
-    }
+    if (!query) return sock.sendMessage(chat, { text: "❌ error!" }, { quoted: msg });
 
     try {
-        // 1. വീഡിയോ സെർച്ച് ചെയ്യുന്നു
-        const search = await yts(searchText);
-        const video = search.videos[0];
+        await sock.sendMessage(chat, { react: { text: "⏳", key: msg.key } });
 
-        if (!video) {
-            return sock.sendMessage(chat, { text: "Video Not Found 😢" });
+        let videoUrl = query;
+
+        // ലിങ്ക് അല്ല നൽകിയതെങ്കിൽ yt-search ഉപയോഗിച്ച് ലിങ്ക് കണ്ടെത്തുന്നു
+        if (!query.includes('youtube.com') && !query.includes('youtu.be')) {
+            const search = await ytSearch(query);
+            const video = search.videos[0];
+            if (!video) throw new Error("വീഡിയോ കണ്ടെത്താനായില്ല!");
+            videoUrl = video.url;
         }
 
-        const videoUrl = video.url;
-        const title = video.title;
-        const channel = video.author.name;
-        const views = video.views;
-        const date = video.ago;
+        // ytd ഫംഗ്ഷൻ വഴി സ്ട്രീമിംഗ് ലിങ്ക് എടുക്കുന്നു
+        const videoData = await ytd(videoUrl);
 
-        const captionText = `*👺⃝⃘̉̉━━━━━━━━━━━◆◆◆*
-*┊ ┊ ┊ ┊ ┊*
-*┊ ┊ ✫ ˚㋛ ⋆｡ ❀*
-*┊ ☪︎⋆*
-*⊹* 🪔 *Video Download*
-*✧* 「 \`👺Asura MD\` 」
-*╰─────────────────❂*
-╭•°•❲ *Downloading...* ❳•°•
- ⊙🎬 *TITLE:* ${title}
-╰━━━━━━━━━━━━━━┈⊷
- ⊙📺 *CHANNEL:* ${channel}
-╰━━━━━━━━━━━━━━┈⊷
- ⊙👀 *VIEWS:* ${views}
-╰━━━━━━━━━━━━━━┈⊷
- ⊙⏳ *AGO:* ${date}
-╰━━━━━━━━━━━━━━┈⊷
-*◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
-╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
-> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
-> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
-
-        // 2. തംബ്‌നെയിൽ അയക്കുന്നു (അതേ ഡിസൈനിൽ)
-        await sock.sendMessage(chat, { image: { url: video.thumbnail }, caption: captionText });
-
-        // 3. API വഴി ഡയറക്ട് ഡൗൺലോഡ് ലിങ്ക് എടുക്കുന്നു
-        const directDownloadLink = await getDownloadUrl(videoUrl);
-
-        if (!directDownloadLink) {
-            return sock.sendMessage(chat, { text: "Error: Unable to fetch download link from APIs! ❌" });
-        }
-
-        // 4. വീഡിയോ സ്ട്രീമിംഗ് ആയി നേരിട്ട് അയക്കുന്നു
+        // നേരിട്ട് സ്ട്രീം ചെയ്ത് അയക്കുന്നു
         await sock.sendMessage(chat, {
-            video: { url: directDownloadLink },
-            mimetype: 'video/mp4',
-            caption: `*${title}*`
+            video: { url: videoData.url },
+            caption: `🎥 *${videoData.title}*\n\n> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`,
+            mimetype: 'video/mp4'
         }, { quoted: msg });
 
-    } catch (err) {
-        console.error("Main Error:", err);
-        sock.sendMessage(chat, { text: "Something went wrong! 😢" });
+        await sock.sendMessage(chat, { react: { text: "✅", key: msg.key } });
+
+    } catch (e) {
+        console.error(e);
+        await sock.sendMessage(chat, { text: "❌ Error." }, { quoted: msg });
     }
 };

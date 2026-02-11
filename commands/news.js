@@ -32,44 +32,22 @@ export default async (sock, msg, args) => {
             return sock.sendMessage(chat, { text: `❌ No news for ${query}` }, { quoted: msg });
         }
 
-        for (let i = 0; i < Math.min(items.length, 5); i++) {
+        let newsList = `📰 *Top Headlines — ${query.toUpperCase()}*\n\n`;
+
+        for (let i = 0; i < Math.min(items.length, 12); i++) {
             const item = items[i];
 
             let title = clean(extract('title', item).split(' - ')[0]);
-            let link = extract('link', item);
             let source = clean(extract('source', item));
-            let pubDate = extract('pubDate', item);
-            let description = clean(extract('description', item));
+            let pubDate = new Date(extract('pubDate', item)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            // 🖼️ image from media tags
-            let image =
-                item.match(/<media:content[^>]*url="([^"]+)"/)?.[1] ||
-                item.match(/<media:thumbnail[^>]*url="([^"]+)"/)?.[1] ||
-                null;
-
-            const caption =
-`📰 *${title}*
-
-🗞 _${source}_
-🕒 ${new Date(pubDate).toLocaleString()}
-
-📄 ${description}
-
-🔗 Read more:
-${link}
-
-> © 👺 Asura MD News`;
-
-            if (image) {
-                await sock.sendMessage(chat, {
-                    image: { url: image },
-                    caption
-                }, { quoted: msg });
-            } else {
-                await sock.sendMessage(chat, { text: caption }, { quoted: msg });
-            }
+            newsList += `${i + 1}. ${title}\n`;
+            newsList += `   🗞 ${source} | 🕒 ${pubDate}\n\n`;
         }
 
+        newsList += `> Asura-MD`;
+
+        await sock.sendMessage(chat, { text: newsList }, { quoted: msg });
         await sock.sendMessage(chat, { react: { text: "📰", key: msg.key } });
 
     } catch (e) {

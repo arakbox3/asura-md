@@ -46,7 +46,7 @@ const inputMp3 = `./in_${Date.now()}.mp3`;
 ╰━━━━━━━━━━━━━━┈⊷
  ⊙⏳ *DURATION:* ${video.timestamp}
 ╰━━━━━━━━━━━━━━┈⊷
-*◀︎ •၊၊||၊||||။‌‌‌‌၊||••*
+*◀︎ •၊၊||၊||||။‌၊||••*
 ╰╌╌╌╌╌╌╌╌╌╌࿐
 ╔━━━━━━━━━━━❥❥❥
 ┃ *Sending Audio 🔊*
@@ -63,15 +63,27 @@ const inputMp3 = `./in_${Date.now()}.mp3`;
         const response = await axios.get(rawAudioUrl, { responseType: 'arraybuffer' });
         fs.writeFileSync(inputMp3, Buffer.from(response.data));
 
-        // 1.  (Audio File)
+        // --- 1. SEND AUDIO FILE ---
+        // Stripping metadata and re-encoding for playability
         await execPromise(`ffmpeg -i ${inputMp3} -map 0:a -codec:a libmp3lame -q:a 2 ${outputMp3}`);
         if (fs.existsSync(outputMp3)) {
             await sock.sendMessage(chat, {
                 audio: fs.readFileSync(outputMp3),
-                mimetype: 'audio/mpeg',
+                mimetype: 'audio/mpeg', 
                 ptt: false 
             }, { quoted: msg });
             fs.unlinkSync(outputMp3);
+        }
+
+        // --- 2. SEND VOICE NOTE (PTT) ---
+        await execPromise(`ffmpeg -i ${inputMp3} -vn -ac 1 -c:a libopus -b:a 64k -application voip -ar 48000 ${outputOpus}`);
+        if (fs.existsSync(outputOpus)) {
+            await sock.sendMessage(chat, {
+                audio: fs.readFileSync(outputOpus),
+                mimetype: 'audio/ogg; codecs=opus',
+                ptt: true 
+            }, { quoted: msg });
+            fs.unlinkSync(outputOpus);
         }
 
         await sock.sendMessage(chat, { react: { text: "✅", key: msg.key } });
@@ -80,8 +92,10 @@ const inputMp3 = `./in_${Date.now()}.mp3`;
         console.error("Error:", e);
         await sock.sendMessage(chat, { text: "❌ Error processing audio!" }, { quoted: msg });
     } finally {
-        // Temporary delete
+        // Cleanup input file
         if (fs.existsSync(inputMp3)) fs.unlinkSync(inputMp3);
     }
 };
 
+
+ 

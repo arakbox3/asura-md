@@ -1,5 +1,6 @@
 import axios from 'axios';
 import ytSearch from 'yt-search';
+import ytdl from '@distube/ytdl-core';
 import { PassThrough } from 'stream';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
@@ -8,7 +9,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-/* ---------------- YTMP3 DIRECT ---------------- */
+/* ---------------- YTMP3 METHOD ---------------- */
 
 const getAudioUrl = async (url) => {
 
@@ -18,34 +19,22 @@ const getAudioUrl = async (url) => {
     };
 
     let videoID;
-    try {
-        const parsed = new URL(url);
-        videoID = parsed.hostname === "youtu.be"
-            ? parsed.pathname.slice(1)
-            : parsed.searchParams.get("v");
-    } catch {
-        throw new Error("Invalid URL");
-    }
+    const parsed = new URL(url);
+    videoID = parsed.hostname === "youtu.be"
+        ? parsed.pathname.slice(1)
+        : parsed.searchParams.get("v");
 
-    // INIT
     const { data: initData } = await axios.get(
         `https://d.ymcdn.org/api/v1/init?p=y&23=1llum1n471&_=${Date.now()}`,
         { headers }
     );
 
-    if (!initData?.convertURL)
-        throw new Error("Init failed");
-
     const convertUrl = `${initData.convertURL}&v=${videoID}&f=mp3&_=${Date.now()}`;
-
     const { data: convertData } = await axios.get(convertUrl, { headers });
 
-    if (!convertData?.progressURL)
-        throw new Error("Convert failed");
-
-    // POLLING
     let attempts = 0;
-    while (attempts < 40) {
+
+    while (attempts < 80) { // ⬅ increased timeout
 
         const { data: progress } = await axios.get(convertData.progressURL, { headers });
 
@@ -55,11 +44,11 @@ const getAudioUrl = async (url) => {
         if (progress.progress === -1)
             throw new Error("Server conversion failed");
 
-        await delay(1500);
+        await delay(2000); // ⬅ slower polling
         attempts++;
     }
 
-    throw new Error("Timeout: Server slow");
+    throw new Error("Timeout");
 };
 
 /* ---------------- MAIN COMMAND ---------------- */
@@ -80,8 +69,6 @@ export default async (sock, msg, args) => {
         await sock.sendMessage(chat, {
             react: { text: "⏳", key: msg.key }
         });
-
-        /* --------- SEARCH --------- */
 
         const search = await ytSearch(query);
         const video = search.videos[0];
@@ -110,27 +97,44 @@ export default async (sock, msg, args) => {
 > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇ BY 👺Asura MD*`;
 
-        /* --------- THUMB --------- */
-
         await sock.sendMessage(chat, {
             image: { url: video.thumbnail },
             caption: infoText
         }, { quoted: msg });
 
-        /* --------- GET DIRECT AUDIO --------- */
+        let inputBuffer;
 
-        const rawAudioUrl = await getAudioUrl(video.url);
+        /* -------- TRY YTMP3 FIRST -------- */
 
-        const response = await axios.get(rawAudioUrl, {
-            responseType: 'arraybuffer',
-            headers: {
-                'Referer': 'https://id.ytmp3.mobi/'
+        try {
+
+            const rawAudioUrl = await getAudioUrl(video.url);
+
+            const response = await axios.get(rawAudioUrl, {
+                responseType: 'arraybuffer',
+                headers: { 'Referer': 'https://id.ytmp3.mobi/' }
+            });
+
+            inputBuffer = Buffer.from(response.data);
+
+        } catch {
+
+            /* -------- FALLBACK TO DIRECT YTDL -------- */
+
+            const stream = ytdl(video.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio'
+            });
+
+            const chunks = [];
+            for await (const chunk of stream) {
+                chunks.push(chunk);
             }
-        });
 
-        const inputBuffer = Buffer.from(response.data);
+            inputBuffer = Buffer.concat(chunks);
+        }
 
-        /* --------- FFMPEG STREAM CONVERT --------- */
+        /* -------- FFMPEG CONVERT -------- */
 
         const convertAudio = () => {
             return new Promise((resolve, reject) => {
@@ -143,7 +147,7 @@ export default async (sock, msg, args) => {
                 ffmpeg(inputStream)
                     .audioBitrate(128)
                     .format('mp3')
-                    .on('error', err => reject(err))
+                    .on('error', reject)
                     .on('end', () => resolve(Buffer.concat(chunks)))
                     .pipe()
                     .on('data', chunk => chunks.push(chunk));
@@ -151,11 +155,6 @@ export default async (sock, msg, args) => {
         };
 
         const finalBuffer = await convertAudio();
-
-        if (!finalBuffer || finalBuffer.length === 0)
-            throw new Error("FFmpeg conversion failed");
-
-        /* --------- SEND AUDIO --------- */
 
         await sock.sendMessage(chat, {
             audio: finalBuffer,
@@ -169,8 +168,6 @@ export default async (sock, msg, args) => {
         });
 
     } catch (e) {
-
-        console.error("Audio Play Error:", e);
 
         await sock.sendMessage(chat,
             { text: "❌ error: " + e.message },

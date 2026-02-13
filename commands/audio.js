@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import ffmpegPath from 'ffmpeg-static';
 
 const execPromise = promisify(exec);
+const ffPath = ffmpegPath; 
 const getAudioUrl = async (url) => {
     const headers = { 'Referer': 'https://id.ytmp3.mobi/' };
     const videoID = url.includes('youtu.be') ? url.split('/').pop() : new URL(url).searchParams.get('v');
@@ -61,39 +62,52 @@ export default async (sock, msg, args) => {
         }, { quoted: msg });
 
         const rawAudioUrl = await getAudioUrl(video.url);
+        
+        // 1. ഫയൽ ഡൗൺലോഡ് ചെയ്യുന്നു
         const response = await axios.get(rawAudioUrl, { responseType: 'arraybuffer' });
         fs.writeFileSync(inputMp3, Buffer.from(response.data));
 
- // --- 1. SEND AUDIO FILE ---
-await execPromise(`${ffmpegPath} -i ${inputMp3} -map 0:a -codec:a libmp3lame -q:a 2 ${outputMp3}`);
-if (fs.existsSync(outputMp3)) {
-    await sock.sendMessage(chat, {
-        audio: fs.readFileSync(outputMp3),
-        mimetype: 'audio/mpeg', 
-        ptt: false 
-    }, { quoted: msg });
-    fs.unlinkSync(outputMp3);
+     // --- 1. SEND AUDIO FILE (Fixed) ---
+try {
+    
+    await execPromise(`"${ffPath}" -y -i "${inputMp3}" -vn -c:a libmp3lame -q:a 4 "${outputMp3}"`);
+    if (fs.existsSync(outputMp3)) {
+        await sock.sendMessage(chat, {
+            audio: fs.readFileSync(outputMp3),
+            mimetype: 'audio/mp4', 
+            ptt: false 
+        }, { quoted: msg });
+        fs.unlinkSync(outputMp3);
+    }
+} catch (err) {
+    console.error("Audio conversion failed:", err);
+    
+    await sock.sendMessage(chat, { audio: fs.readFileSync(inputMp3), mimetype: 'audio/mpeg' }, { quoted: msg });
 }
 
-// --- 2. SEND VOICE NOTE (PTT) ---
-await execPromise(`${ffmpegPath} -i ${inputMp3} -vn -ac 1 -c:a libopus -b:a 64k -vbr on -ar 48000 -f opus ${outputOpus}`);
-if (fs.existsSync(outputOpus)) {
-    await sock.sendMessage(chat, {
-        audio: fs.readFileSync(outputOpus),
-        mimetype: 'audio/ogg; codecs=opus',
-        ptt: true 
-    }, { quoted: msg });
-    fs.unlinkSync(outputOpus);
+// --- 2. SEND VOICE NOTE (PTT Fixed) ---
+try { 
+   
+    await execPromise(`"${ffPath}" -y -i "${inputMp3}" -vn -ac 1 -c:a libopus -b:a 64k -application voip -flags +global_header -ar 48000 "${outputOpus}"`);
+    
+    if (fs.existsSync(outputOpus)) {
+        await sock.sendMessage(chat, {
+            audio: fs.readFileSync(outputOpus),
+            mimetype: 'audio/ogg; codecs=opus',
+            ptt: true 
+        }, { quoted: msg });
+        fs.unlinkSync(outputOpus);
+    }
+} catch (err) {
+    console.error("PTT conversion failed:", err);
 }
-        
+
         await sock.sendMessage(chat, { react: { text: "✅", key: msg.key } });
 
     } catch (e) {
-        console.error("Error:", e);
-        await sock.sendMessage(chat, { text: "❌ Error processing audio!" }, { quoted: msg });
+        console.error("Main Error:", e);
+        await sock.sendMessage(chat, { text: "❌ Error: " + e.message }, { quoted: msg });
     } finally {
-        // Cleanup input file
         if (fs.existsSync(inputMp3)) fs.unlinkSync(inputMp3);
     }
-};
 

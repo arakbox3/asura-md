@@ -195,6 +195,7 @@ if (fs.existsSync(imagePath)) {
                 }
             }, { quoted: msg });
         }
+        //button message 
        const buttons = [
             {
                 "name": "single_select",
@@ -225,33 +226,25 @@ if (fs.existsSync(imagePath)) {
         const listMessage = {
             viewOnceMessage: {
                 message: {
-                    interactiveMessage: {
-                        header: { title: "", hasMediaAttachment: false },
-                        body: { text: "click on the button:" },
-                        footer: { text: "© Asura MD" },
-                        nativeFlowMessage: {
+                    interactiveMessage: {              
+                           body: { text: "click on the button below" },
+                            header: { title: "", hasMediaAttachment: false },
+                            footer: { text: "© Asura MD" },
+                            nativeFlowMessage: {
                             buttons: buttons,
-                            messageParamsJson: JSON.stringify({})
+                            messageParamsJson: JSON.stringify({}),
+                            messageVersion: 4, 
                         },
                         contextInfo: {
                             mentionedJid: [msg.sender],
                             forwardingScore: 999,
-                            isForwarded: true,
-
-                            externalAdReply: {
-                                title: 'Asura MD 👺',
-                                thumbnail: fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : null,
-                                sourceUrl: 'https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24',
-                                mediaType: 1
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        await sock.relayMessage(chat, listMessage, {});
-        
+                            isForwarded: true
+                       }
+                 }
+           }
+     };
+ 
+    await sock.relayMessage(chat, listMessage, { messageId: msg.key.id });    
     } catch (error) {
         console.error("Error in Help command:", error);
     }

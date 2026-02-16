@@ -64,9 +64,25 @@ export default async (sock, msg, args) => {
         const songPath = './media/song.opus'; 
         
                   // username,time,date
-        const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-        const pushName = msg.pushName || 'User'; 
+        const options = { 
+              timeZone: 'Asia/Kolkata', 
+              hour12: true, 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              second: '2-digit' 
+           };
+
+         const dateOptions = { 
+               timeZone: 'Asia/Kolkata', 
+               day: '2-digit', 
+               month: '2-digit', 
+               year: 'numeric' 
+           };
+
+              // Crete variable 
+         const time = new Date().toLocaleTimeString('en-IN', options);
+         const date = new Date().toLocaleDateString('en-GB', dateOptions);
+         const pushName = msg.pushName || 'User';
    
         const helpText = `
 *👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*

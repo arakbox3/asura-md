@@ -1,6 +1,4 @@
 import fs from 'fs';
-import { generateWAMessageFromContent } from '@whiskeysockets/baileys'; 
-
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
 
@@ -64,7 +62,12 @@ export default async (sock, msg, args) => {
 
         const imagePath = './media/asura.jpg'; 
         const songPath = './media/song.opus'; 
-
+        
+                  // username,time,date
+        const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        const pushName = msg.pushName || 'User'; 
+   
         const helpText = `
 *👺⃝⃘̉̉̉━━━━━━━━━◆◆◆◆◆*
 *┊ ┊ ┊ ┊ ┊*
@@ -76,6 +79,10 @@ export default async (sock, msg, args) => {
 *╭━❐━━━━━━━━━❥❥❥* 
 *├⊙ 👤 Owner:* ┊arun•°Cumar 
 *╰━━━━━━━━━━━┈⊷*
+*├⊙ 📅 DATE:*  ${date}
+*╰━━━━━━━━━━━┈⊷*
+*├⊙ ⌚ TIME:*  ${time}
+*╰━━━━━━━━━━━┈⊷*
 *├⊙ 🛠️ STATUS:* Online
 *╰━━━━━━━━━━━┈⊷*
 *├⊙ 📦 Prefix:* . , ! #
@@ -84,6 +91,7 @@ export default async (sock, msg, args) => {
 *╰━━━━━━━━━━━┈⊷*
 *├⊙ 🏷️ Version:* v2.0
 *╰━❐━━━━━━━━━❥❥❥*
+_*👋🏻Hello ${pushName}! Welcome to ASURA-MD*_ 
 ╭━❐━━━━━━━━━❥❥❥
 ┃ °☆°☆°☆°☆°☆°☆°☆°☆°
 ╠━❐━━━⛥❖⛥━━━❥❥❥
@@ -196,64 +204,7 @@ if (fs.existsSync(imagePath)) {
                 }
             }, { quoted: msg });
         }
-        //button message 
-       const buttons = [
-            {
-                "name": "single_select",
-                "buttonParamsJson": JSON.stringify({
-                    "title": "Asura-MD Whatsapp Bot",
-                    "sections": [
-                        {
-                            "title": "Asura MD Commands",
-                            "rows": [
-                                { "title": "📜 Menu", "rowId": ".menu", "description": "Show all commands" },
-                                { "title": "🏓 Ping", "rowId": ".ping", "description": "Check speed" },
-                                { "title": "🔋 Alive", "rowId": ".alive", "description": "Check status" },
-                                { "title": "🤴 Owner", "rowId": ".owner", "description": "Check creator" }
-                            ]
-                        },
-                        {
-                            "title": "Downloader",
-                            "rows": [
-                                { "title": "🎬 Video", "rowId": ".video", "description": "Download Video" },
-                                { "title": "🔊 Audio", "rowId": ".audio", "description": "Download MP3" }
-                            ]
-                        }
-                    ]
-                })
-            }
-        ];
 
-        const listMessage = {
-            viewOnceMessage: {
-                message: {
-                    interactiveMessage: {              
-                           body: { text: "click on the button below" },
-                            header: { title: "", hasMediaAttachment: false },
-                            footer: { text: "© Asura MD" },
-                            nativeFlowMessage: {
-                            buttons: buttons,
-                            messageParamsJson: JSON.stringify({}),
-                            messageVersion: 4
-                        },
-                        contextInfo: {
-                            mentionedJid: [msg.sender],
-                            forwardingScore: 999,
-                            isForwarded: true
-                       }
-                 }
-           }
-     };
- 
-            const msgGenerated = await generateWAMessageFromContent(chat, listMessage, { 
-            quoted: msg, 
-            userJid: sock.user.id 
-        });
-
-        await sock.relayMessage(chat, msgGenerated.message, { 
-            messageId: msgGenerated.key.id 
-        });
-   
     } catch (error) {
         console.error("Error in Help command:", error);
     }

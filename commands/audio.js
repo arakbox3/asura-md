@@ -39,7 +39,7 @@ const ytd = async (url) => {
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
     const query = args.join(' ');
-    if (!query) return sock.sendMessage(chat, { text: "❌ Please provide a name or link!" });
+    if (!query) return sock.sendMessage(chat, { text: "❌ Please provide a name or link! *Example: .audio callin u*" });
 
     try {
         await sock.sendMessage(chat, { react: { text: "⏳", key: msg.key } });

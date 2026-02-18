@@ -10,7 +10,7 @@ export default async (sock, msg, args) => {
         await sock.sendMessage(chat, { react: { text: "📥", key: msg.key } });
 
         // Fdownloader API Request
-        const response = await axios.post('https://fdownloader.net/api/ajaxSearch', 
+        const response = await axios.post('https://snapvid.net/en/facebook-downloader/api/ajaxSearch', 
             new URLSearchParams({ 'q': url, 'vt': 'facebook' }), 
             {
                 headers: {

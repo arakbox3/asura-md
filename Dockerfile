@@ -14,4 +14,4 @@ RUN npm install
 COPY . .
 
 # bot start commands
-CMD ["node", "start.js"]
+CMD ["node", "index.js", "npm start", "start.js"]

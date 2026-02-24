@@ -1,5 +1,4 @@
-
-FROM node:lts-buster
+FROM node:18-bullseye
 
 # system packages install
 RUN apt-get update && \

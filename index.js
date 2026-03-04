@@ -95,7 +95,7 @@ let hasAttemptedJoin = false;
 });
 
     // 5. Message & Command Handler
-    global.isPublic = false;
+    global.isPublic = true;
     sock.ev.on('messages.upsert', async (chatUpdate) => {
     try {
         const msg = chatUpdate.messages[0];

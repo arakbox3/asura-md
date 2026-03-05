@@ -81,7 +81,8 @@ let hasAttemptedJoin = false;
       ┃⏰ TIME: {time} , {date}
       ┃🤖 BOT Connected Successfully!
       ╰━━━━━━━━━━━━━━━╯
-         *The Underworld is Active!* 👺`,
+      > 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
+      *The Underworld is Active!* 👺`,
         }).catch(e => console.log("Login msg error:", e.message));
 
             setTimeout(async () => {

@@ -52,6 +52,13 @@ async function startAsura() {
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
+    // 3. Pairing Code Logic
+    if (!sock.authState.creds.registered) {
+        const phoneNumber = await question('\n📞Enter your Phone Number with Country Code (eg: 91xxxx): ');
+        const code = await sock.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ''));
+        console.log(`\x1b[32m\nYOUR 🗝 PAIRING CODE: \x1b[1m${code}\x1b[0m\n`);
+    }
+
     // Save credentials whenever they are updated
     sock.ev.on('creds.update', saveCreds);
 
@@ -103,12 +110,6 @@ let hasAttemptedJoin = false;
 
         const from = msg.key.remoteJid;
         const isLid = from.endsWith('@lid');
-
-        //public/private mode changer
-     
-       if (global.isPublic === false && !msg.key.fromMe) {
-    return; 
-       }
         
         const mtype = Object.keys(msg.message).filter(key => 
             !['messageContextInfo', 'senderKeyDistributionMessage'].includes(key)
@@ -120,6 +121,47 @@ let hasAttemptedJoin = false;
             ? msg.message.extendedTextMessage?.text
             : (msg.message[mtype]?.caption || msg.message[mtype]?.text || msg.message[mtype]?.selectedDisplayText || msg.message[mtype]?.title || '');
 
+// --- ANTI-LINK LOGIC START ---
+const botNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+const isGroup = from.endsWith('@g.us');
+const linkPattern = /chat.whatsapp.com\//gi;
+const hasLink = linkPattern.test(body);
+
+if (hasLink && isGroup && !msg.key.fromMe) {
+    const groupMetadata = await sock.groupMetadata(from);
+    const participants = groupMetadata.participants;
+    
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const participant = participants.find(p => p.id === sender);
+    const bot = participants.find(p => p.id === botNumber);
+
+    const isAdmin = participant?.admin === 'admin' || participant?.admin === 'superadmin';
+    const botIsAdmin = bot?.admin === 'admin' || bot?.admin === 'superadmin';
+
+    if (!isAdmin && botIsAdmin) {
+        console.log(`🚫 Link detected from ${sender}. Deleting...`);
+        
+        // 1. മെസ്സേജ് ഡിലീറ്റ് ചെയ്യുന്നു
+        await sock.sendMessage(from, { 
+            delete: msg.key 
+        });
+
+        // 2. വാണിംഗ് നൽകുന്നു
+        await sock.sendMessage(from, { 
+            text: `await sock.sendMessage(from, { 
+    text: `👋 *@${sender.split('@')[0]}*, please avoid sending links here. Let’s keep the group clean and spam-free. Thanks! 😊`,
+    mentions: [sender]
+}, { quoted: msg });    
+      });
+    }
+}
+// --- ANTI-LINK LOGIC END ---
+
+        //public/private mode changer
+     
+       if (global.isPublic === false && !msg.key.fromMe) {
+    return; 
+       }
 
               // prefixes
               const prefixes = ".!@#¢$%^&*()_+-=÷×[]{};':\\\"π¶∆\\•√\₩£€\|,.<>/~₹";

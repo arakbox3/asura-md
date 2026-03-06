@@ -45,20 +45,16 @@ export default async (sock, msg, args) => {
 ╰━━━━━━━━━━━━━━┈⊷
 ╎ ⊙ 👨‍💻𝙳𝚎𝚟 : arun.Cumar
 ╰╌╌╌╌╌╌╌╌╌╌╌╌࿐
-> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
 > *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
 
-        // 1. മെയിൻ പിംഗ് മെസ്സേജ് (Image + Caption)
+      
         if (fs.existsSync(imagePath)) {
             await sock.sendMessage(chat, { 
                 image: fs.readFileSync(imagePath), 
                 caption: pingMsg 
             }, { quoted: msg });
-        } else {
-            await sock.sendMessage(chat, { text: pingMsg }, { quoted: msg });
         }
 
-        // 2. വോയിസ് മെസ്സേജ് അയക്കുന്നു (song.opus)
         if (fs.existsSync(audioPath)) {
             await sock.sendMessage(chat, { 
                 audio: fs.readFileSync(audioPath), 
@@ -67,24 +63,25 @@ export default async (sock, msg, args) => {
             }, { quoted: msg });
         }
 
-        // 3.(Ads)
-        const groupLink = "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24";
-        const adMsg = `🏮 *Asura MD Community:*
-Stay updated with us!
+        // Ads with Newsletter info
+        const adMsg = `🏮 *Asura MD Community:* https://chat.whatsapp.com/LdNb1Ktmd70EwMJF3X6xPD`;
 
-🔗 ${groupLink}
-
-> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
-
-        await sock.sendMessage(chat, { 
-            text: adMsg,
+             await sock.sendMessage(chat, { 
+             text: adMsg,
             contextInfo: {
+            isForwarded: true,
+            forwardedNewsletterMessageInfo: {
+            newsletterJid: '120363422992896382@newsletter',
+            newsletterName: '👺 ASURA-MD', 
+            serverMessageId: 143
+               },             
+        forwardingScore: 999,
                 externalAdReply: {
                     title: "👺 ASURA MD OFFICIAL COMMUNITY",
                     body: "Join now for bot support! ✨",
+                    thumbnail: fs.readFileSync(imagePath),
+                    sourceUrl: 'https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24',
                     mediaType: 1,
-                    sourceUrl: groupLink,
-                    showAdAttribution: false,
                     renderLargerThumbnail: true 
                 }
             }

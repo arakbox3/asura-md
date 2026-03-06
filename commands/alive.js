@@ -1,4 +1,3 @@
-
 import fs from 'fs';
 
 export default async (sock, msg, args) => {
@@ -27,8 +26,9 @@ export default async (sock, msg, args) => {
 ╰━━━━━━━━━━━━━━┈⊷
 ┃ *⊙👺ᴅᴇᴠᴇʟᴏᴘᴇʀ:- ᴀʀᴜɴ.ᴄᴜᴍᴀʀ*
 ╚━━━━━⛥❖⛥━━━━❥❥❥
-> 📢 Join our channel: https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24
-> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
+
+©️ 👺 𝐴𝑠𝑢𝑟𝑎 𝑀𝐷 ᴍɪɴɪ ʙᴏᴛ
+𝑠ɪᴍᴘʟᴇ ᴡᴀʙᴏᴛ ᴍᴀᴅᴇ ʙʏ 𝑎𝑟𝑢𝑛.𝑐𝑢𝑚𝑎𝑟 ヅ`;
 
     try {
         // 1. Send photo
@@ -59,7 +59,7 @@ Stay updated with Asura MD
 
 🔗 *Group:* ${groupLink}
 
-> *© ᴄʀᴇᴀᴛᴇᴅ ʙʏ 👺Asura MD*`;
+> *©️ ᴄʀᴇᴀᴛᴇᴅ ʙʏ arun°•Cumar*`;
 
         await sock.sendMessage(chat, { 
             text: adMsg,
